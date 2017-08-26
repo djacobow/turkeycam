@@ -1,17 +1,17 @@
 #!/usr/bin/env python3
 
 import sys
-import picamera
 import time
 import io
-from PIL import Image
-import requests
 import datetime
+import pytz
 import base64
 import json
+import picamera
+from PIL import Image
+import requests
 import RPi.GPIO as GPIO
 from astral import Astral
-import pytz
 
 cfg = {
     'token': '+gI0O6wTIuo9Les7iSdfWxTvXrShJyrLpu0opBfkI=',
@@ -21,11 +21,13 @@ cfg = {
     'shutdown_pin': 13,
     'heartbeat_pin': 11,
     'city': 'San Francisco',
-    'tzname': 'US/Pacific',
+    #'tzname': 'US/Pacific',
+    'tzname': 'UTC',
     'picture_period': 30,
     'heartbeat_period': 10,
     'tick_length': 0.5,
     'heartbeat_ticks': 10,
+    'shutdown_delay': 90,
 }
 
 
@@ -64,10 +66,13 @@ def uploadOne(img, ip = None):
  
 
 def shutdown():
-    print('Shutting down!')
+    print('Shutting down in ' + str(cfg['shutdown_delay']) + ' seconds!')
+    time.sleep(cfg['shutdown_delay'])
+    print('Telling watchdog to turn off power.')
     GPIO.output(cfg['shutdown_pin'], GPIO.LOW)
     GPIO.output(cfg['heartbeat_pin'], GPIO.HIGH)
     if True:
+        print('Shutting down.')
         import subprocess
         process = subprocess.Popen(cfg['shutdown_cmd'].split(), stdout=subprocess.PIPE)
         output = process.communicate()[0]
@@ -113,6 +118,10 @@ def mymain():
 
         #if count > 40:
         if now > sun['sunset']:
+            print('now')
+            print(now)
+            print('sunset')
+            print(sun['sunset'])
             running = False
             shutdown()
 
