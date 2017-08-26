@@ -1,0 +1,16 @@
+[Unit]
+Description=Berkeley Lab Turkeyserver Backend
+
+[Service]
+Type=simple
+Restart=always
+User=dgj
+Group=dgj
+RestartSec=10
+Environment=PATH=/usr/local/bin:/usr/bin:/bin
+WorkingDirectory=/home/dgj/projects/turkeycam/server
+ExecStart=/usr/bin/node /home/dgj/projects/turkeycam/server/index.js
+
+[Install]
+WantedBy=multi-user.target
+
