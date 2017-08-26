@@ -21,8 +21,9 @@ def captureToImage():
     image = None
     stream = None
     with picamera.PiCamera() as camera:
+        camera.resolution = (800, 600)
         stream = io.BytesIO()
-        camera.capture(stream, format='png')
+        camera.capture(stream, format='jpeg')
         stream.seek(0)
         image = Image.open(stream)
         stream.seek(0)
@@ -33,14 +34,14 @@ def captureToImage():
 
 
 def uploadOne(img, ip = None):
-    url = 'https://skunkworks.lbl.gov/turkeycam'
+    url = 'https://skunkworks.lbl.gov/turkeycam/newimage'
     now = datetime.datetime.now()
     data = {
         'token': token,
         'source': 'turkeyCam',
         'date': now.isoformat(),
         'source_ip': ip,
-        'image_png': base64.b64encode(img['stream'].getvalue()).decode('utf-8'),
+        'image_jpeg': base64.b64encode(img['stream'].getvalue()).decode('utf-8'),
     }
     return requests.post(url, data = data)
  
@@ -48,7 +49,13 @@ def uploadOne(img, ip = None):
 
 if __name__ == '__main__':
     ip = myIP()
-    w = captureToImage()
-    uploadOne(w,ip)
+    while True:
+        try:
+            w = captureToImage()
+            res = uploadOne(w,ip)
+            print(res)
+        except:
+            print('well, that didn\'t work')
 
+        time.sleep(30);
     
