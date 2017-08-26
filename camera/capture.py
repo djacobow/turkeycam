@@ -25,7 +25,7 @@ cfg = {
     'picture_period': 30,
     'heartbeat_period': 10,
     'tick_length': 0.5,
-    'heartbeat_ticks': 6,
+    'heartbeat_ticks': 10,
 }
 
 
