@@ -48,10 +48,18 @@ var makeTable = function(d) {
     removeChildren(ddiv);
     if (d && d.aws_results && d.aws_results.Labels) {
         var t = document.createElement('table');
+        var r = document.createElement('tr');
+        td0 = document.createElement('th');
+        td1 = document.createElement('th');
+        td0.innerText = 'Label';
+        td1.innerText = 'Confidence';
+        r.appendChild(td0);
+        r.appendChild(td1);
+        t.appendChild(r);
         d.aws_results.Labels.forEach(function(el) {
-            var r = document.createElement('tr');
-            var td0 = document.createElement('td');
-            var td1 = document.createElement('td');
+            r = document.createElement('tr');
+            td0 = document.createElement('td');
+            td1 = document.createElement('td');
             td0.innerText = el.Name;
             var conf = Math.floor((parseFloat(el.Confidence) * 100) + 0.5) / 100;
             td1.innerText = conf.toString();
@@ -61,6 +69,12 @@ var makeTable = function(d) {
         });
         ddiv.appendChild(t);
     }
+    if (d && d.date) {
+        var p = document.createElement('p');
+        p.innerText = d.date;
+        ddiv.appendChild(p);
+    }
+
 };
 
 var checkData = function(cb) {
