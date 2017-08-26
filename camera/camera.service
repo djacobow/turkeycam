@@ -1,0 +1,16 @@
+[Unit]
+Description=Berkeley Lab TurkeyCam Daemon 
+
+[Service]
+Type=simple
+Restart=always
+User=pi
+Group=pi
+RestartSec=10
+Environment=PATH=/usr/local/bin:/usr/bin:/bin
+WorkingDirectory=/home/pi/turkeycam/camera
+ExecStart=/usr/bin/python3 /home/pi/turkeycam/camera/capture.py
+
+[Install]
+WantedBy=multi-user.target
+
