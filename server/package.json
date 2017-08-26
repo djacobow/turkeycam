@@ -1,0 +1,16 @@
+{
+  "name": "turkeyserver",
+  "version": "1.0.0",
+  "description": "receive turkey images, submit them to Amazon, report on results",
+  "main": "index.js",
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "author": "Dave Jacobowitz",
+  "license": "UNLICENSED",
+  "dependencies": {
+    "aws-sdk": "^2.104.0",
+    "body-parser": "^1.17.2",
+    "express": "^4.15.4"
+  }
+}
