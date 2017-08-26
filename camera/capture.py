@@ -53,7 +53,7 @@ if __name__ == '__main__':
         try:
             w = captureToImage()
             res = uploadOne(w,ip)
-            print(res)
+            print(res.body)
         except:
             print('well, that didn\'t work')
 
