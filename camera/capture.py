@@ -17,7 +17,7 @@ cfg = {
     'token': '+gI0O6wTIuo9Les7iSdfWxTvXrShJyrLpu0opBfkI=',
     'image_res': (800, 600),
     'url': 'https://skunkworks.lbl.gov/turkeycam/newimage',
-    'shutdown_cmd': '/usr/bin/sudo /sbin/shutdown -r now',
+    'shutdown_cmd': '/usr/bin/sudo /sbin/shutdown -h now',
     'shutdown_pin': 13,
     'heartbeat_pin': 11,
     'city': 'San Francisco',
@@ -66,6 +66,7 @@ def uploadOne(img, ip = None):
 def shutdown():
     print('Shutting down!')
     GPIO.output(cfg['shutdown_pin'], GPIO.LOW)
+    GPIO.output(cfg['heartbeat_pin'], GPIO.HIGH)
     if True:
         import subprocess
         process = subprocess.Popen(cfg['shutdown_cmd'].split(), stdout=subprocess.PIPE)
