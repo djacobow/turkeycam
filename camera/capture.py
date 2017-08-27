@@ -15,19 +15,22 @@ from astral import Astral
 
 cfg = {
     'token': '+gI0O6wTIuo9Les7iSdfWxTvXrShJyrLpu0opBfkI=',
-    'image_res': (800, 600),
     'url': 'https://skunkworks.lbl.gov/turkeycam/newimage',
     'shutdown_cmd': '/usr/bin/sudo /sbin/shutdown -h now',
     'shutdown_pin': 13,
     'heartbeat_pin': 11,
     'city': 'San Francisco',
     #'tzname': 'US/Pacific',
-    'tzname': 'UTC',
     'picture_period': 30,
     'heartbeat_period': 10,
     'tick_length': 0.5,
     'heartbeat_ticks': 10,
     'shutdown_delay': 90,
+    'cam_params': {
+        'resolution': (800, 600),
+        'iso': 25,
+        'vflip': True,
+    },
 }
 
 
@@ -41,8 +44,11 @@ def captureToImage():
     image = None
     stream = None
     with picamera.PiCamera() as camera:
-        camera.resolution = cfg['image_res']
+        for param in cfg['cam_params']:
+            setattr(camera,param,cfg['cam_params'][param])
+
         stream = io.BytesIO()
+        time.sleep(1)
         camera.capture(stream, format='jpeg')
         stream.seek(0)
         image = Image.open(stream)
@@ -97,6 +103,33 @@ def unsetupGPIO():
     GPIO.output(cfg['heartbeat_pin'], GPIO.HIGH)
     GPIO.output(cfg['shutdown_pin'], GPIO.HIGH)
 
+
+def isDaylight(now, city):
+
+    def dateToSSM(d):
+        ssm = (d - d.replace(hour=0, minute=0, second=0, microsecond=0)).total_seconds()
+        return ssm
+
+    #n0 = pytz.timezone('utc').localize(now)
+    n0 = now
+    #print('before: ' + str(dateToSSM(n0)))
+    n1 = n0.astimezone(pytz.timezone('US/Pacific'))
+    #print('after: '  + str(dateToSSM(n1)))
+
+    sun = city.sun(date=now, local = True)
+    sunset_ssm  = dateToSSM(sun['sunset'])
+    sunrise_ssm = dateToSSM(sun['sunrise'])
+    now_ssm     = dateToSSM(n1) 
+  
+    if False:
+        print('now_ssm:  ' + str(now_ssm))
+        print('set_ssm:  ' + str(sunset_ssm))
+        print('rise_ssm: ' + str(sunrise_ssm))
+
+    daylight = now_ssm > sunrise_ssm and now_ssm < sunset_ssm
+    return daylight
+
+
 def mymain():
     setupGPIO()
 
@@ -104,8 +137,8 @@ def mymain():
     a.solar_depression = 'civil';
     city = a[cfg['city']]
 
-    last_shot      = pytz.timezone(cfg['tzname']).localize(datetime.datetime.now())
-    last_heartbeat = pytz.timezone(cfg['tzname']).localize(datetime.datetime.now())
+    last_shot      = pytz.timezone('utc').localize(datetime.datetime.now())
+    last_heartbeat = pytz.timezone('utc').localize(datetime.datetime.now())
     sun = city.sun(date=last_shot, local = True)
 
     ip = myIP()
@@ -114,14 +147,10 @@ def mymain():
     beat_count = 0
 
     while running:
-        now = pytz.timezone(cfg['tzname']).localize(datetime.datetime.now())
+        now = pytz.timezone('utc').localize(datetime.datetime.now())
 
         #if count > 40:
-        if now > sun['sunset']:
-            print('now')
-            print(now)
-            print('sunset')
-            print(sun['sunset'])
+        if not isDaylight(now, city):
             running = False
             shutdown()
 
