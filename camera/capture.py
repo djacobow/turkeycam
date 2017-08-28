@@ -72,11 +72,22 @@ def uploadOne(img, ip = None):
  
 
 def shutdown():
+
+    def signalShutdownRequest():
+        # not one, but several pulses are required to get watchdog
+        # to initiate power-off 
+        GPIO.output(cfg['heartbeat_pin'], GPIO.HIGH)
+        for x in range(4):
+            print("Pulse " + str(x))
+            GPIO.output(cfg['shutdown_pin'], GPIO.HIGH)
+            time.sleep(2)
+            GPIO.output(cfg['shutdown_pin'], GPIO.LOW)
+            time.sleep(2)
+
     print('Shutting down in ' + str(cfg['shutdown_delay']) + ' seconds!')
     time.sleep(cfg['shutdown_delay'])
     print('Telling watchdog to turn off power.')
-    GPIO.output(cfg['shutdown_pin'], GPIO.LOW)
-    GPIO.output(cfg['heartbeat_pin'], GPIO.HIGH)
+    signalShutdownRequest()
     if True:
         print('Shutting down.')
         import subprocess
