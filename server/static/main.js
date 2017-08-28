@@ -7,18 +7,9 @@ var removeChildren = function(n) {
 };
 
 
-var reloadImage = function() {
+var reloadImage = function(name) {
     console.log('reloadImage()');
-    if (false) {
-        console.log('reload_img');
-        var idiv = document.getElementById('imgdiv');    
-        removeChildren(idiv);
-        var img = document.createElement('img');
-        img.src = '/turkeycam/image';
-        idiv.appendChild(img);
-    }
-
-    document.getElementById('myimg').src = '/turkeycam/image?' + (new Date()).getTime();
+    document.getElementById('myimg').src = '/turkeycam/image/' + name + '?' + (new Date()).getTime();
 };
 
 
@@ -37,10 +28,12 @@ var getJSON = function(url, cb) {
 };
 
 
-current_result = {
-    valid: false,
-    busy: false,
-    date: '',
+current_results = {
+    cam0: {
+        valid: false,
+        busy: false,
+        date: '',
+    },
 };
 
 var makeTable = function(d) {
@@ -79,18 +72,25 @@ var makeTable = function(d) {
 
 var checkData = function(cb) {
     console.log('checkData()');
-    getJSON('/turkeycam/status', function(err, data) {
+    getJSON('/turkeycam/status', function(err, indata) {
+        
+        var name = "cam0";
+        var data = indata[name];
+        var current_result = current_results[name];
+    
         console.log('getJSON CB()');
         if (err) {
             return cb('err');
+        } else if (!data || !current_result) {
+            return cb('err missing camera');
         } else if (data && 
             (!current_result || 
-             (current_result.data != data.date)) &&
+             (current_result.date != data.date)) &&
              data.valid
            ) {
-            current_result = data;
+            current_results[name] = data;
             console.log(JSON.stringify(data,null,2));
-            reloadImage();
+            reloadImage(name);
             makeTable(data);
             return cb(null,data);
         } else {

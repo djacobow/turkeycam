@@ -3,7 +3,7 @@ var express    = require('express');
 var app        = express();
 var bodyParser = require('body-parser');
 var aws        = require('aws-sdk');
-var secret     = require('./secret_code.json')
+var secret     = require('./secret_code.json');
 
 aws.config.loadFromPath('./aws.json');
 aws.config.logger = process.stdout;
@@ -19,10 +19,12 @@ var port = process.env.TURKEY_PORT || 9080;
 var router = express.Router();
 
 
-var cstate = {
-    busy: false,
-    valid: false,
-    image_number: 0,
+var cstates = {
+    cam0: {
+        busy: false,
+        valid: false,
+        image_number: 0,
+    }
 };
 
 
@@ -57,6 +59,7 @@ var handleImagePost = function(req, res) {
     console.log('post!');
     var b = req.body;
     if (b.hasOwnProperty('token') && (b.token == poster_token)) {
+       var cstate = cstates.cam0;
        cstate.busy = true;
        cstate.source_ip = b.source_ip; 
        cstate.date = b.date;
@@ -85,14 +88,20 @@ var handleImagePost = function(req, res) {
 var handleStatusGet = function(req, res) {
     console.log('get!');
     var rv = {};
-    Object.keys(cstate).forEach(function(k) {
-        if (k !== 'image_jpeg') rv[k] = cstate[k];
+    Object.keys(cstates).forEach(function(camn) {
+        rv[camn] = {};
+        var cstate = cstates[camn];
+        Object.keys(cstate).forEach(function(k) {
+            if (k !== 'image_jpeg') rv[camn][k] = cstate[k];
+        });
     });
     res.json(rv);
 };
 
 var handleImageGet = function(req, res) {
-    if (cstate.valid && !cstate.busy) {
+    var name = req.params.name;
+    var cstate = cstates[name];
+    if (cstate && cstate.valid && !cstate.busy) {
         res.writeHead(200,{'Content-Type': 'image/jpeg'});
         res.end(cstate.image_jpeg, 'binary');
     } else {
@@ -115,11 +124,11 @@ var handleJSGet = function(req, res) {
     simpleSplat(res,'text/javascript', 'main.js');
 };
 
-router.post('/newimage', handleImagePost);
-router.get('/status',    handleStatusGet);
-router.get('/image',     handleImageGet);
-router.get('/',          handleRootGet);
-router.get('/main.js',   handleJSGet);
+router.post('/newimage',   handleImagePost);
+router.get('/status',      handleStatusGet);
+router.get('/image/:name', handleImageGet);
+router.get('/',            handleRootGet);
+router.get('/main.js',     handleJSGet);
 
 app.use('/turkeycam', router);
 
