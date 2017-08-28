@@ -3,12 +3,14 @@ var express    = require('express');
 var app        = express();
 var bodyParser = require('body-parser');
 var aws        = require('aws-sdk');
+var secret     = require('./secret_code.json')
+
 aws.config.loadFromPath('./aws.json');
 aws.config.logger = process.stdout;
 
 var rekognition = new aws.Rekognition();
 
-var poster_token = '+gI0O6wTIuo9Les7iSdfWxTvXrShJyrLpu0opBfkI=';
+var poster_token = secret.token;
 
 app.use(bodyParser.urlencoded({extended: true, limit: '50mb'}));
 app.use(bodyParser.json({limit:'50mb'}));

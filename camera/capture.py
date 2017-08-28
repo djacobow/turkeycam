@@ -13,8 +13,12 @@ import requests
 import RPi.GPIO as GPIO
 from astral import Astral
 
+with open('secret_code.json') as fh:
+    secret = json.load(fh)
+
+
 cfg = {
-    'token': '+gI0O6wTIuo9Les7iSdfWxTvXrShJyrLpu0opBfkI=',
+    'token': secret['token'],
     'url': 'https://skunkworks.lbl.gov/turkeycam/newimage',
     'shutdown_cmd': '/usr/bin/sudo /sbin/shutdown -h now',
     'shutdown_pin': 13,
