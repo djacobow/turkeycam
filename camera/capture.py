@@ -66,6 +66,7 @@ def captureToImage():
 def uploadOne(img, ip = None):
     now = datetime.datetime.now()
     data = {
+        'camera_name': secret.get('camera_name',''),
         'token': cfg['token'],
         'source': 'turkeyCam',
         'date': now.isoformat(),
