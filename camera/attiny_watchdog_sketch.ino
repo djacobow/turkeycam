@@ -17,10 +17,10 @@ const uint32_t WATCHDOG_TIMEOUT_SECONDS  = 30;
 const uint32_t SHUTDOWN_DELAY_SECONDS    = 15;
 
 #else
-const uint32_t NIGHT_DURATION_SECONDS    = 1 * 60 * 60;
+const uint32_t NIGHT_DURATION_SECONDS    = 60 * 60;
 const uint32_t HOLD_OFF_DURATION_SECONDS = 15 * 60;
-const uint32_t WATCHDOG_TIMEOUT_SECONDS  = 2 * 60;
-const uint32_t SHUTDOWN_DELAY_SECONDS    = 3 * 60;
+const uint32_t WATCHDOG_TIMEOUT_SECONDS  = 3 * 60;
+const uint32_t SHUTDOWN_DELAY_SECONDS    = 2 * 60;
 #endif
 
 
@@ -76,10 +76,26 @@ bool got_shutdown_request() {
   }
   if (no_p_count > 10) p_count = 0;
   last_reading = current_reading;
-  return (p_count == 3);
+  if (p_count == 3) {
+    p_count = 0;
+    no_p_count = 0;
+    return true;
+  }
+  return false;
 }
 
 void loop() {
+
+    bool heartbeat = got_pulse();
+    
+    if (heartbeat) {
+      time_unpinged = 0;
+    } else {
+      time_unpinged += 1;
+    }
+
+    bool shutdown_request = got_shutdown_request();
+    
     switch (current_mode) {
         case mode_normal_on:
             digitalWrite(DEBUG1_PIN, LOW);
@@ -90,7 +106,7 @@ void loop() {
               time_unpinged = 0;
             }
             
-            if (got_shutdown_request()) {
+            if (shutdown_request) {
               current_mode = mode_night_pre_off;
               time_pre_off = 0;
             }
@@ -100,11 +116,7 @@ void loop() {
             digitalWrite(DEBUG1_PIN, HIGH);
             digitalWrite(DEBUG2_PIN, LOW);
 
-            if (got_pulse()) {
-              time_pre_off = 0;
-              time_unpinged = 0;
-              current_mode = mode_normal_on;
-            } else if (time_pre_off > SHUTDOWN_DELAY_SECONDS) {
+             if (time_pre_off > SHUTDOWN_DELAY_SECONDS) {
               current_mode = mode_night_off;
               time_pre_off = 0;
             } else {
@@ -116,9 +128,7 @@ void loop() {
             digitalWrite(DEBUG1_PIN, LOW);
             digitalWrite(DEBUG2_PIN, HIGH);
 
-            if ((time_off > NIGHT_DURATION_SECONDS) || got_pulse()
-            ) {
-              time_unpinged = 0;
+            if ((time_off > NIGHT_DURATION_SECONDS) || false ) {
               current_mode = mode_normal_on;
               time_off = 0;
             } else {
@@ -130,20 +140,14 @@ void loop() {
             digitalWrite(DEBUG1_PIN, HIGH);
             digitalWrite(DEBUG2_PIN, HIGH);
 
-            if ((time_off > HOLD_OFF_DURATION_SECONDS) || got_pulse()) {
+            if ((time_off > HOLD_OFF_DURATION_SECONDS) || heartbeat) {
               time_off = 0;
-              time_unpinged = 0;
               current_mode = mode_normal_on;
             } else {
               time_off += 1;
             }
     }
 
-    if (got_pulse()) {
-      time_unpinged = 0;
-    } else {
-      time_unpinged += 1;
-    }
 
     bool off = (current_mode == mode_night_off) ||
                (current_mode == mode_watchdog_off);
