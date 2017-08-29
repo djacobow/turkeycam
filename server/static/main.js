@@ -1,7 +1,4 @@
 
-console.log('Hi there! 000');
-// Hi there!
-
 var removeChildren = function(n) {
     while (n.hasChildNodes()) n.removeChild(n.lastChild);
 };
@@ -14,11 +11,9 @@ var reloadImage = function(name) {
 
 
 var getJSON = function(url, cb) {
-    console.log('getJSON');
     var xhr = new XMLHttpRequest();
     xhr.onreadystatechange = function() {
         if ((this.readyState == 4) && (this.status == 200)) {
-            console.log('getJSON parseAttempt');
             var data = JSON.parse(this.responseText);
             return cb(null, data);
         }
@@ -70,18 +65,26 @@ var makeTable = function(d) {
 
 };
 
-var checkData = function(cb) {
-    console.log('checkData()');
-    getJSON('/turkeycam/status', function(err, indata) {
-        
-        var name = "cam0";
-        var data = indata[name];
+var getCamList = function(cb) {
+    getJSON('/turkeycam/cameranames', function(err, data) {
+        if (err) {
+            console.log('Error getting camera list: ' + err);
+            return cb(err);
+        } else {
+            return cb(null,data);
+        }
+    });
+};
+
+var checkData = function(name, cb) {
+    getJSON('/turkeycam/status/' + name, function(err, data) {
         var current_result = current_results[name];
     
-        console.log('getJSON CB()');
         if (err) {
+            console.log('checkData err: ' + err);
             return cb('err');
         } else if (!data || !current_result) {
+            console.log('checkData err, missing camera');
             return cb('err missing camera');
         } else if (data && 
             (!current_result || 
@@ -100,11 +103,18 @@ var checkData = function(cb) {
 };
 
 var startTimer = function() {
-    checkData(function(err, data) {
-        console.log('checkData CB()');
+    checkData(cams[0], function(err, data) {
         window.setTimeout(startTimer, 15000);
     });
 };
 
 
-startTimer();
+
+var cams = [];
+
+getCamList(function(err,incams) {
+    if (!err) {
+        cams = incams;
+        startTimer();
+    }
+});
