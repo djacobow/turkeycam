@@ -59,7 +59,8 @@ var handleImagePost = function(req, res) {
     console.log('post!');
     var b = req.body;
     if (b.hasOwnProperty('token') && (b.token == poster_token)) {
-       var cstate = cstates.cam0;
+       var camera_name = b.camera_name;
+       var cstate = cstates[camera_name];
        cstate.busy = true;
        cstate.source_ip = b.source_ip; 
        cstate.date = b.date;
