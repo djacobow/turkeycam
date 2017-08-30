@@ -89,7 +89,9 @@ def wait_for_time_sync():
             if re.match(r'NTP synchronized: yes',line):
                 print('Time synchronized.')
                 ready = True
-        time.sleep(5)
+        if not ready:
+            print('Waiting for clock to be ready.')
+            time.sleep(5)
 
 
 
