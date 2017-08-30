@@ -6,6 +6,8 @@ import io
 import datetime
 import pytz
 import base64
+import subprocess
+import re
 import json
 import picamera
 from PIL import Image
@@ -21,6 +23,7 @@ cfg = {
     'token': secret['token'],
     'url': 'https://skunkworks.lbl.gov/turkeycam/newimage',
     'shutdown_cmd': '/usr/bin/sudo /sbin/shutdown -h now',
+    'timedatecmd': '/usr/bin/timedatectl',
     'shutdown_pin': 13,
     'heartbeat_pin': 11,
     'city': 'San Francisco',
@@ -76,6 +79,20 @@ def uploadOne(img, ip = None):
     return requests.post(cfg['url'], data = data)
  
 
+def wait_for_time_sync():
+    ready = False
+    while not ready:
+        process = subprocess.Popen(cfg['timedatecmd'].split(), stdout=subprocess.PIPE)
+        output = [x.decode('ascii') for x in process.communicate()[0].splitlines() ]
+
+        for line in output:
+            if re.match(r'NTP synchronized: yes',line):
+                print('Time synchronized.')
+                ready = True
+        time.sleep(5)
+
+
+
 def shutdown():
 
     def signalShutdownRequest():
@@ -95,7 +112,6 @@ def shutdown():
     signalShutdownRequest()
     if True:
         print('Shutting down.')
-        import subprocess
         process = subprocess.Popen(cfg['shutdown_cmd'].split(), stdout=subprocess.PIPE)
         output = process.communicate()[0]
         print(output)
@@ -137,7 +153,7 @@ def isDaylight(now, city):
     sunrise_ssm = dateToSSM(sun['sunrise'])
     now_ssm     = dateToSSM(n1) 
   
-    if False:
+    if True:
         print('now_ssm:  ' + str(now_ssm))
         print('set_ssm:  ' + str(sunset_ssm))
         print('rise_ssm: ' + str(sunrise_ssm))
@@ -147,6 +163,9 @@ def isDaylight(now, city):
 
 
 def mymain():
+
+    wait_for_time_sync()
+
     setupGPIO()
 
     a = Astral()
