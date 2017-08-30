@@ -59,7 +59,8 @@ var handleImagePost = function(req, res) {
     console.log('post!');
     var b = req.body;
     if (b.hasOwnProperty('token') && (b.token == poster_token)) {
-       var cstate = cstates.cam0;
+       var camera_name = b.camera_name;
+       var cstate = cstates[camera_name];
        cstate.busy = true;
        cstate.source_ip = b.source_ip; 
        cstate.date = b.date;
@@ -84,17 +85,24 @@ var handleImagePost = function(req, res) {
 };
 
 
+var handleListGet = function(req, res) {
+    console.log('GET list of cameras');
+    rv = Object.keys(cstates);
+    res.json(rv);
+};
 
 var handleStatusGet = function(req, res) {
-    console.log('get!');
-    var rv = {};
-    Object.keys(cstates).forEach(function(camn) {
-        rv[camn] = {};
-        var cstate = cstates[camn];
+    console.log('GET camera status!');
+    var name = req.params.name;
+    var cstate = cstates[name] || null;
+    rv = {};
+    if (cstate) {
         Object.keys(cstate).forEach(function(k) {
-            if (k !== 'image_jpeg') rv[camn][k] = cstate[k];
+            if (k !== 'image_jpeg') rv[k] = cstate[k];
         });
-    });
+    } else {
+        rv.message = 'no such camera';
+    }
     res.json(rv);
 };
 
@@ -125,7 +133,8 @@ var handleJSGet = function(req, res) {
 };
 
 router.post('/newimage',   handleImagePost);
-router.get('/status',      handleStatusGet);
+router.get('/cameranames', handleListGet);
+router.get('/status/:name', handleStatusGet);
 router.get('/image/:name', handleImageGet);
 router.get('/',            handleRootGet);
 router.get('/main.js',     handleJSGet);
