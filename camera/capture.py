@@ -147,14 +147,14 @@ def isDaylight(now, city):
     #n0 = pytz.timezone('utc').localize(now)
     n0 = now
     #print('before: ' + str(dateToSSM(n0)))
-    n1 = n0.astimezone(pytz.timezone('US/Pacific'))
+    #n1 = n0.astimezone(pytz.timezone('US/Pacific'))
     #print('after: '  + str(dateToSSM(n1)))
+    n1 = n0
 
     sun = city.sun(date=now, local = True)
     sunset_ssm  = dateToSSM(sun['sunset'])
     sunrise_ssm = dateToSSM(sun['sunrise'])
     now_ssm     = dateToSSM(n1) 
-  
     if True:
         print('now_ssm:  ' + str(now_ssm))
         print('set_ssm:  ' + str(sunset_ssm))
