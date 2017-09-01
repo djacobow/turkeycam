@@ -127,9 +127,13 @@ var handleRootGet = function(req, res) {
     console.log('get HTML');
     simpleSplat(res,'text/html', 'index.html');
 };
-var handleJSGet = function(req, res) {
+var handleJSGetM = function(req, res) {
     console.log('get JS');
     simpleSplat(res,'text/javascript', 'main.js');
+};
+var handleJSGetA = function(req, res) {
+    console.log('get Async JS');
+    simpleSplat(res,'text/javascript', 'async.js');
 };
 
 router.post('/newimage',   handleImagePost);
@@ -137,7 +141,8 @@ router.get('/cameranames', handleListGet);
 router.get('/status/:name', handleStatusGet);
 router.get('/image/:name', handleImageGet);
 router.get('/',            handleRootGet);
-router.get('/main.js',     handleJSGet);
+router.get('/main.js',     handleJSGetM);
+router.get('/async.js',    handleJSGetA);
 
 app.use('/turkeycam', router);
 
