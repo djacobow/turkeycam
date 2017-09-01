@@ -23,12 +23,12 @@ cfg = {
     'token': secret['token'],
     'url': 'https://skunkworks.lbl.gov/turkeycam/newimage',
     'shutdown_cmd': '/usr/bin/sudo /sbin/shutdown -h now',
-    'timedatecmd': '/usr/bin/timedatectl',
+    'datetimecmd': '/usr/bin/timedatectl',
     'shutdown_pin': 13,
     'heartbeat_pin': 11,
     'city': 'San Francisco',
     #'tzname': 'US/Pacific',
-    'picture_period': 30,
+    'picture_period': 15,
     'heartbeat_period': 10,
     'tick_length': 0.5,
     'heartbeat_ticks': 10,
@@ -36,7 +36,7 @@ cfg = {
     'cam_params': {
         'resolution': (800, 600),
         'iso': 25,
-        'vflip': True,
+        'vflip': False,
     },
 }
 
@@ -82,7 +82,7 @@ def uploadOne(img, ip = None):
 def wait_for_time_sync():
     ready = False
     while not ready:
-        process = subprocess.Popen(cfg['timedatecmd'].split(), stdout=subprocess.PIPE)
+        process = subprocess.Popen(cfg['datetimecmd'].split(), stdout=subprocess.PIPE)
         output = [x.decode('ascii') for x in process.communicate()[0].splitlines() ]
 
         for line in output:
@@ -104,12 +104,21 @@ def shutdown():
         for x in range(4):
             print("Pulse " + str(x))
             GPIO.output(cfg['shutdown_pin'], GPIO.HIGH)
+            GPIO.output(cfg['heartbeat_pin'], GPIO.LOW)
             time.sleep(2)
             GPIO.output(cfg['shutdown_pin'], GPIO.LOW)
+            GPIO.output(cfg['heartbeat_pin'], GPIO.HIGH)
             time.sleep(2)
 
     print('Shutting down in ' + str(cfg['shutdown_delay']) + ' seconds!')
-    time.sleep(cfg['shutdown_delay'])
+    st = datetime.datetime.now()
+    while (datetime.datetime.now() - st).seconds < cfg['shutdown_delay']:
+        print(datetime.datetime.now() - st)
+        GPIO.output(cfg['heartbeat_pin'], GPIO.LOW)
+        time.sleep(2)
+        GPIO.output(cfg['heartbeat_pin'], GPIO.HIGH)
+        time.sleep(2)
+
     print('Telling watchdog to turn off power.')
     signalShutdownRequest()
     if True:
