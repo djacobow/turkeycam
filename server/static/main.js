@@ -131,6 +131,8 @@ var makeCamDivs = function(camlist,cb) {
     var topdiv = document.getElementById('topdiv');
     camlist.forEach(function(cname) {
         var cam_top_div = document.createElement('div');
+        var cam_nam_div = document.createElement('div');
+        cam_nam_div.innerText = "Camera: " + cname;
         var cam_img_div = document.createElement('div');
         cam_img_div.style = "width: 801px; float: left;";
         var cam_img     = document.createElement('img');
@@ -139,6 +141,7 @@ var makeCamDivs = function(camlist,cb) {
         cam_dta_div.style = "margin-left: 801px;";
         var cam_trk_div = document.createElement('div');
         cam_trk_div.style = "margin-left: 801px;";
+        cam_top_div.appendChild(cam_nam_div);
         cam_top_div.appendChild(cam_img_div);
         cam_top_div.appendChild(cam_dta_div);
         cam_top_div.appendChild(cam_trk_div);
