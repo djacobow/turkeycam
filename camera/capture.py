@@ -26,6 +26,8 @@ cfg = {
     'datetimecmd': '/usr/bin/timedatectl',
     'shutdown_pin': 13,
     'heartbeat_pin': 11,
+    'lowbatt_pin': 15,
+    'max_lowbatt_before_shutdown': 4,
     'city': 'San Francisco',
     #'tzname': 'US/Pacific',
     'picture_period': 15,
@@ -35,7 +37,7 @@ cfg = {
     'shutdown_delay': 90,
     'cam_params': {
         'resolution': (800, 600),
-        'iso': 25,
+        'iso': 100,
         'vflip': False,
     },
 }
@@ -141,6 +143,7 @@ def setupGPIO():
     GPIO.setmode(GPIO.BOARD)
     GPIO.setup(cfg['heartbeat_pin'], GPIO.OUT, initial = GPIO.HIGH)
     GPIO.setup(cfg['shutdown_pin'], GPIO.OUT, initial = GPIO.HIGH)
+    GPIO.setup(cfg['lowbatt_pin'], GPIO.IN)
 
 def unsetupGPIO():
     GPIO.output(cfg['heartbeat_pin'], GPIO.HIGH)
@@ -191,6 +194,7 @@ def mymain():
     count = 0
     running = True;
     beat_count = 0
+    batt_nok_count = 0
 
     while running:
         now = pytz.timezone('utc').localize(datetime.datetime.now())
@@ -200,6 +204,17 @@ def mymain():
             running = False
             shutdown()
 
+        batt_ok = GPIO.input(cfg['lowbatt_pin'])
+        if batt_ok:
+            batt_nok_count = 0
+        else:
+            print('Low battery detected.')
+            batt_nok_count += 1
+            if batt_nok_count > cfg['max_lowbatt_before_shutdown']:
+                print('Non-transient low battery. Starting shutdown.')
+                shutdown()
+
+        print('batt ok: ' + str(batt_ok))
         if now - last_shot > datetime.timedelta(seconds=cfg['picture_period']):
             last_shot = now
             takeAndUploadPhoto(ip)
