@@ -4,6 +4,7 @@ var app        = express();
 var bodyParser = require('body-parser');
 var aws        = require('aws-sdk');
 var secret     = require('./secret_code.json');
+var fs         = require('fs');
 
 aws.config.loadFromPath('./aws.json');
 aws.config.logger = process.stdout;
@@ -18,6 +19,12 @@ app.use(bodyParser.json({limit:'50mb'}));
 var port = process.env.TURKEY_PORT || 9080;
 var router = express.Router();
 
+var interesting_names = {
+    cat:1,
+    goat: 1,
+    turkey: 1,
+    turkeys: 1,
+};
 
 var cstates = {
     cam0: {
@@ -55,6 +62,36 @@ var sendToAWS = function(idata, cb) {
 };
 
 
+
+var saveImage = function(cs) {
+    if (cs.valid) {
+        var nows = (new Date()).toISOString();
+        var fn = './images/' + nows + '.jpg';
+        var ws = fs.createWriteStream(fn);
+        ws.write(cs.image_jpeg);
+        ws.end();
+    }
+};
+
+
+var looksInteresting = function(cs) {
+    var interesting = false;
+    if (cs.hasOwnProperty('aws_results') && 
+        cs.aws_results.hasOwnProperty('Labels')) {
+        for (var i=0; i< cs.aws_results.Labels.length; i++) {
+            var label = cs.aws_results.Labels[i].Name;
+            var conf  = cs.aws_results.Labels[i].Confidence;
+            if (conf > 50 && (interesting_names.hasOwnProperty(label.toLowerCase()))) {
+                interesting = true;
+                break;
+            }
+        }
+    }
+    return interesting;
+};
+
+
+
 var handleImagePost = function(req, res) {
     console.log('post!');
     var b = req.body;
@@ -77,6 +114,10 @@ var handleImagePost = function(req, res) {
                message: 'thanks!',
                image_number: cstate.image_number,
            });
+
+           if (looksInteresting(cstate)) {
+               saveImage(cstate);
+           }
        });
     } else {
        res.status(403);
