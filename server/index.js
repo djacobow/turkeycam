@@ -148,7 +148,7 @@ var handleStatusGet = function(req, res) {
 };
 
 var handleImageGet = function(req, res) {
-    var name = req.params.name;
+    var name = req.params.name.replace('/','');
     var cstate = cstates[name];
     if (cstate && cstate.valid && !cstate.busy) {
         res.writeHead(200,{'Content-Type': 'image/jpeg'});
@@ -159,22 +159,51 @@ var handleImageGet = function(req, res) {
     }
 };
 
+
 var simpleSplat = function(res, type, fn) {
     // res.writeHead(200,{'Content-Type': type});
-    res.sendFile(__dirname + '/static/' + fn);
+    res.sendFile(__dirname + fn);
 };
 
 var handleRootGet = function(req, res) {
     console.log('get HTML');
-    simpleSplat(res,'text/html', 'index.html');
+    simpleSplat(res,'text/html', '/static/index.html');
 };
 var handleJSGetM = function(req, res) {
     console.log('get JS');
-    simpleSplat(res,'text/javascript', 'main.js');
+    simpleSplat(res,'text/javascript', '/static/main.js');
 };
 var handleJSGetA = function(req, res) {
     console.log('get Async JS');
-    simpleSplat(res,'text/javascript', 'async.js');
+    simpleSplat(res,'text/javascript', '/static/async.js');
+};
+
+var handleTIKImageGet = function(req, res) {
+    var name = req.params.name.replace('/','');
+    fs.access(__dirname + '/images/' + name, 
+              fs.constants.R_OK, 
+              function(err) {
+        if (err) {
+            res.status(500);
+            res.json({message: 'Whoops. Problem sending file.'});
+            return;
+        } else {
+            simpleSplat(res, 'image/jpeg', '/images/' + name);
+        }
+    });
+
+};
+
+var handleTIKListGet = function(req, res) {
+    var files = fs.readdir(__dirname + '/images/', function(err, files) {
+        if (err) {
+            //res.status(500);
+            res.json({message: 'Ruh roh, raggy.'});
+            return;
+        }
+        res.status(200);
+        res.json(files);
+    });
 };
 
 router.post('/newimage',   handleImagePost);
@@ -184,6 +213,8 @@ router.get('/image/:name', handleImageGet);
 router.get('/',            handleRootGet);
 router.get('/main.js',     handleJSGetM);
 router.get('/async.js',    handleJSGetA);
+router.get('/turkeys/list',handleTIKListGet);
+router.get('/turkeys/:name/', handleTIKImageGet);
 
 app.use('/turkeycam', router);
 
