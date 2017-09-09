@@ -95,9 +95,18 @@ var looksInteresting = function(cs) {
 var handleImagePost = function(req, res) {
     console.log('post!');
     var b = req.body;
-    if (b.hasOwnProperty('token') && (b.token == poster_token)) {
+    if (b.hasOwnProperty('token') && 
+        b.hasOwnProperty('camera_name') &&
+        secret.hasOwnProperty(b.camera_name) &&
+        secret[b.camera_name].hasOwnProperty('token') &&
+        (b.token == secret[b.camera_name].token)) {
        var camera_name = b.camera_name;
-       var cstate = cstates[camera_name];
+       var cstate = cstates[camera_name] || null;
+       if (!cstate) {
+           res.status('403');
+           res.json({message:'unknown camera'});
+           return;
+       }
        cstate.busy = true;
        cstate.source_ip = b.source_ip; 
        cstate.date = b.date;
