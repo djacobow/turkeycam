@@ -17,9 +17,12 @@ app.use(bodyParser.urlencoded({extended: true, limit: '50mb'}));
 app.use(bodyParser.json({limit:'50mb'}));
 
 var port = process.env.TURKEY_PORT || 9080;
+var fake = process.env.TURKEY_FAKE_REKOGNITION || true;
+
 var router = express.Router();
 
 var interesting_names = {
+    dog:1,
     cat:1,
     goat: 1,
     turkey: 1,
@@ -36,8 +39,31 @@ Object.keys(secret).forEach(function(camera_name) {
     };
 });
 
+var fakeSendToAWS = function(idata, cb) {
+    rd = {
+        message: 'This is a fake response. We never used AWS Rekognition',
+        fakemode: true,
+        Labels: [
+            {
+                "Name": "Flying Saucer",
+                "Confidence": "100",
+            },
+            {
+                "Name": "Elvis",
+                "Confidence": "90",
+            },
+        ],
+        OrientationCorrection: "ROTATE_0",
+    };
+
+    return cb(null,rd);
+};
+
+
 var sendToAWS = function(idata, cb) {
     console.log('sendToAWS()');
+    if (fake) return fakeSendToAWS(idata,cb);
+
     var parms = {
         Image: {
             Bytes: idata.image_jpeg
