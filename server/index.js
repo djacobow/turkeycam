@@ -26,14 +26,15 @@ var interesting_names = {
     turkeys: 1,
 };
 
-var cstates = {
-    cam0: {
+cstates = {};
+
+Object.keys(secret).forEach(function(camera_name) {
+    cstates[camera_name] = {
         busy: false,
         valid: false,
         image_number: 0,
-    }
-};
-
+    };
+});
 
 var sendToAWS = function(idata, cb) {
     console.log('sendToAWS()');

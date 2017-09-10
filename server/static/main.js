@@ -131,6 +131,7 @@ var makeCamDivs = function(camlist,cb) {
     var topdiv = document.getElementById('topdiv');
     camlist.forEach(function(cname) {
         var cam_top_div = document.createElement('div');
+        cam_top_div.style = "float: left; width: 100%;";
         var cam_nam_div = document.createElement('div');
         cam_nam_div.innerText = "Camera: " + cname;
         var cam_img_div = document.createElement('div');
@@ -145,6 +146,7 @@ var makeCamDivs = function(camlist,cb) {
         cam_top_div.appendChild(cam_img_div);
         cam_top_div.appendChild(cam_dta_div);
         cam_top_div.appendChild(cam_trk_div);
+        cam_top_div.appendChild(document.createElement('br'));
         topdiv.appendChild(cam_top_div);
         camelems[cname] = {
             img_div: cam_img_div,
