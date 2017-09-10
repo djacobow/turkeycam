@@ -11,15 +11,10 @@ aws.config.logger = process.stdout;
 
 var rekognition = new aws.Rekognition();
 
-var poster_token = secret.token;
-
-app.use(bodyParser.urlencoded({extended: true, limit: '50mb'}));
-app.use(bodyParser.json({limit:'50mb'}));
 
 var port = process.env.TURKEY_PORT || 9080;
 var fake = process.env.TURKEY_FAKE_REKOGNITION || true;
 
-var router = express.Router();
 
 var interesting_names = {
     dog:1,
@@ -242,19 +237,29 @@ var handleTIKListGet = function(req, res) {
     });
 };
 
-router.post('/newimage',   handleImagePost);
-router.get('/cameranames', handleListGet);
-router.get('/status/:name', handleStatusGet);
-router.get('/image/:name', handleImageGet);
-router.get('/',            handleRootGet);
-router.get('/main.js',     handleJSGetM);
-router.get('/async.js',    handleJSGetA);
-router.get('/turkeys/list',handleTIKListGet);
-router.get('/turkeys/:name/', handleTIKImageGet);
 
-app.use('/turkeycam', router);
+if (require.main === module) {
 
-app.listen(port);
-console.log('TurkeyCam running on port ' + port);
+    var router = express.Router();
+
+    router.post('/newimage',   handleImagePost);
+    router.get('/cameranames', handleListGet);
+    router.get('/status/:name', handleStatusGet);
+    router.get('/image/:name', handleImageGet);
+    router.get('/',            handleRootGet);
+    router.get('/main.js',     handleJSGetM);
+    router.get('/async.js',    handleJSGetA);
+    router.get('/turkeys/list',handleTIKListGet);
+    router.get('/turkeys/:name/', handleTIKImageGet);
+
+    app.use(bodyParser.urlencoded({extended: true, limit: '50mb'}));
+    app.use(bodyParser.json({limit:'50mb'}));
+
+    app.use('/turkeycam', router);
+
+    app.listen(port);
+    console.log('TurkeyCam running on port ' + port);
+    if (fake) console.log('Faking calls to Rekognition to save money.');
+}
 
 
