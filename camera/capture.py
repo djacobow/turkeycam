@@ -30,7 +30,7 @@ cfg = {
     'max_lowbatt_before_shutdown': 4,
     'city': 'San Francisco',
     #'tzname': 'US/Pacific',
-    'picture_period': 15,
+    'picture_period': 60,
     'heartbeat_period': 10,
     'tick_length': 0.5,
     'heartbeat_ticks': 10,
@@ -45,7 +45,8 @@ cfg = {
 
 def myIP():
     try:
-        return requests.get('https://api.ipify.org/?format=json').json()['ip']
+        # return requests.get('https://api.ipify.org/?format=json').json()['ip']
+        return requests.get('https://ipinfo.io').json()['ip']
     except:
         return 'dunno'
 
