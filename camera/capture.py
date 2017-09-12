@@ -36,7 +36,8 @@ cfg = {
     'heartbeat_ticks': 10,
     'shutdown_delay': 90,
     'cam_params': {
-        'resolution': (800, 600),
+        'resolution': (2560, 2048),
+        #'resolution': (3280, 2464),  # max native res for pi camera2
         'iso': 100,
         'vflip': False,
     },
@@ -141,6 +142,7 @@ def takeAndUploadPhoto(ip):
         print(e)
 
 def setupGPIO():
+    GPIO.setwarnings(False)
     GPIO.setmode(GPIO.BOARD)
     GPIO.setup(cfg['heartbeat_pin'], GPIO.OUT, initial = GPIO.HIGH)
     GPIO.setup(cfg['shutdown_pin'], GPIO.OUT, initial = GPIO.HIGH)
