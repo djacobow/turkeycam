@@ -79,7 +79,7 @@ def uploadOne(img, ip = None):
         'source_ip': ip,
         'image_jpeg': base64.b64encode(img['stream'].getvalue()).decode('utf-8'),
     }
-    return requests.post(cfg['url'], data = data)
+    return requests.post(cfg['url'], data = data, timeout=30)
  
 
 def wait_for_time_sync():
@@ -168,7 +168,7 @@ def isDaylight(now, city):
     sunset_ssm  = dateToSSM(sun['sunset'])
     sunrise_ssm = dateToSSM(sun['sunrise'])
     now_ssm     = dateToSSM(n1) 
-    if True:
+    if False:
         print('now_ssm:  ' + str(now_ssm))
         print('set_ssm:  ' + str(sunset_ssm))
         print('rise_ssm: ' + str(sunrise_ssm))
@@ -215,7 +215,7 @@ def mymain():
                 print('Non-transient low battery. Starting shutdown.')
                 shutdown()
 
-        print('batt ok: ' + str(batt_ok))
+        #print('batt ok: ' + str(batt_ok))
         if now - last_shot > datetime.timedelta(seconds=cfg['picture_period']):
             last_shot = now
             takeAndUploadPhoto(ip)
