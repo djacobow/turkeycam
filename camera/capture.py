@@ -20,6 +20,7 @@ with open('secret_code.json') as fh:
 
 
 cfg = {
+    'use_pil': False,
     'token': secret['token'],
     'url': 'https://skunkworks.lbl.gov/turkeycam/newimage',
     'shutdown_cmd': '/usr/bin/sudo /sbin/shutdown -h now',
@@ -38,8 +39,10 @@ cfg = {
     'cam_params': {
         'resolution': (2560, 2048),
         #'resolution': (3280, 2464),  # max native res for pi camera2
-        'iso': 100,
+        # auto iso
+        #'iso': 100,
         'vflip': False,
+        'image_effect': 'denoise',
     },
 }
 
@@ -62,8 +65,9 @@ def captureToImage():
         time.sleep(1)
         camera.capture(stream, format='jpeg')
         stream.seek(0)
-        image = Image.open(stream)
-        stream.seek(0)
+        if cfg['use_pil']:
+            image = Image.open(stream)
+            stream.seek(0)
 
     return { 'image': image, 'stream': stream }
 
@@ -80,7 +84,7 @@ def uploadOne(img, ip = None):
         'source_ip': ip,
         'image_jpeg': base64.b64encode(img['stream'].getvalue()).decode('utf-8'),
     }
-    return requests.post(cfg['url'], data = data, timeout=30)
+    return requests.post(cfg['url'], data = data, timeout=60)
  
 
 def wait_for_time_sync():
