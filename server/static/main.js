@@ -7,9 +7,12 @@ var removeChildren = function(n) {
 };
 
 
-var reloadImage = function(name) {
+var reloadImage = function(name,crdate) {
     console.log('reloadImage(' + name + ')');
-    camelems[name].img.src = '/turkeycam/image/' + name + '?' + (new Date()).getTime();
+    camelems[name].img.style.display = 'inline';
+    var img_url = '/turkeycam/image/' + name + '?date=' + encodeURIComponent(crdate);
+    camelems[name].img.src = img_url;
+    camelems[name].img_a.href = img_url;
 };
 
 
@@ -115,7 +118,7 @@ var checkData = function(name, cb) {
            ) {
             current_results[name] = data;
             console.log(JSON.stringify(data,null,2));
-            reloadImage(name);
+            reloadImage(name,data.date);
             makeTable(name,data);
             turkeyAlert(name,data);
             return cb(null,data);
@@ -137,7 +140,12 @@ var makeCamDivs = function(camlist,cb) {
         var cam_img_div = document.createElement('div');
         cam_img_div.style = "width: 801px; float: left;";
         var cam_img     = document.createElement('img');
-        cam_img_div.appendChild(cam_img);
+        cam_img.style = "width: 800px; height: 600px;";
+        cam_img.style.display = 'none';
+        var cam_img_a = document.createElement('a');
+        cam_img_a.href = "";
+        cam_img_div.appendChild(cam_img_a);
+        cam_img_a.appendChild(cam_img);
         var cam_dta_div = document.createElement('div');
         cam_dta_div.style = "margin-left: 801px;";
         var cam_trk_div = document.createElement('div');
@@ -149,6 +157,7 @@ var makeCamDivs = function(camlist,cb) {
         cam_top_div.appendChild(document.createElement('br'));
         topdiv.appendChild(cam_top_div);
         camelems[cname] = {
+            img_a: cam_img_a,
             img_div: cam_img_div,
             img: cam_img,
             data: cam_dta_div,
