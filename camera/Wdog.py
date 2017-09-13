@@ -11,7 +11,7 @@ class Wdog:
         self.cfg = icfg
         self.last_heartbeat = datetime.datetime.now()
         self.batt_nok_count = 0
-        self.beat_count = 0
+        self.hb_in_progress = False
 
     def setup(self):
 
@@ -48,15 +48,18 @@ class Wdog:
 
     def beatHeart(self):
         now = datetime.datetime.now()
-        if now - self.last_heartbeat > datetime.timedelta(seconds=self.cfg['heartbeat_period']):
-            self.last_heartbeat = now
-            GPIO.output(self.cfg['heartbeat_pin'], GPIO.LOW)
-            self.beat_count = 0
-        elif self.beat_count == self.cfg['heartbeat_ticks']:
-            self.beat_count = 0
-            GPIO.output(self.cfg['heartbeat_pin'], GPIO.HIGH)
+        if self.hb_in_progress:
+            if now - self.last_heartbeat > datetime.timedelta(seconds=self.cfg['heartbeat_low_secs']):
+                self.hb_in_progress = False
+                GPIO.output(self.cfg['heartbeat_pin'], GPIO.HIGH)
+                print('hb_FINISH');
         else:
-            self.beat_count += 1
+            if now - self.last_heartbeat > datetime.timedelta(seconds=self.cfg['heartbeat_period']):
+                self.last_heartbeat = now
+                self.hb_in_progress = True
+                GPIO.output(self.cfg['heartbeat_pin'], GPIO.LOW)
+                print('hb_START');
+
 
     def shutdown(self):
 

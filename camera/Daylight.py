@@ -27,7 +27,7 @@ class Daylight():
         sunset_ssm  = dateToSSM(sun['sunset'])
         sunrise_ssm = dateToSSM(sun['sunrise'])
         now_ssm     = dateToSSM(n1) 
-        if True:
+        if False:
             print('now_ssm:  ' + str(now_ssm))
             print('set_ssm:  ' + str(sunset_ssm))
             print('rise_ssm: ' + str(sunrise_ssm))

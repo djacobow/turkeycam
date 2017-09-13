@@ -16,7 +16,7 @@ from Wdog import Wdog
 from Daylight import Daylight
 
 last_idata = None
-trailing_average_sameness = 1
+trailing_average_sameness = None
 
 with open('secret_code.json') as fh:
     secret = json.load(fh)
@@ -30,8 +30,9 @@ cfg = {
         'shutdown_cmd': '/usr/bin/sudo /sbin/shutdown -h now',
         'max_lowbatt_before_shutdown': 4,
         'heartbeat_period': 10,
+        'heartbeat_low_secs': 5,
         'shutdown_delay': 90,
-        'heartbeat_ticks': 10,
+        #'heartbeat_ticks': 10,
         'datetimecmd': '/usr/bin/timedatectl',
     },
     'use_pil': False,
@@ -39,7 +40,7 @@ cfg = {
     'url': 'https://skunkworks.lbl.gov/turkeycam/newimage',
     'city': 'San Francisco',
     #'tzname': 'US/Pacific',
-    'picture_period': 5,
+    'picture_period': 10,
     'tick_length': 0.5,
     'cam_params': {
         'resolution': (2560, 2048),
@@ -99,7 +100,6 @@ def compareImages(i0,i1):
     sm1 = rebin(gs1,newshape)
 
     s = ssim(sm0, sm1)
-    print('Images are ' + str(s) + ' similar.')
     return s
 
 def takePhotoAndMaybeUpload(ip):
@@ -111,6 +111,11 @@ def takePhotoAndMaybeUpload(ip):
         sameness = compareImages(idata, last_idata)
 
         if sameness is not None:
+            if trailing_average_sameness is None:
+                trailing_average_sameness = sameness
+
+            print('Sameness: {0}, Trailing: {1}'.format(str(sameness),str(trailing_average_sameness)))
+            
             trailing_average_sameness += -0.1 * trailing_average_sameness + 0.1 * sameness
             if sameness < 0.90 * trailing_average_sameness:
                 res = uploadImage(idata,ip)
