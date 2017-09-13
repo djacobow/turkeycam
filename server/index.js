@@ -11,7 +11,7 @@ aws.config.loadFromPath('./aws.json');
 aws.config.logger = process.stdout;
 
 var port = process.env.TURKEY_PORT || 9080;
-var fake = process.env.TURKEY_FAKE_REKOGNITION || true;
+var fake = process.env.TURKEY_FAKE_REKOGNITION || false;
 
 var simpleSplat = function(res, type, fn) {
     res.sendFile(__dirname + fn);
@@ -70,9 +70,9 @@ if (require.main === module) {
     var rekognition = null;
     if (!fake) rekognition = new aws.Rekognition();
 
-    var interesting = {
-        dog:1, cat:1, goat:1, turkey:1, turkeys:1,
-    };
+    var interesting = [
+        'dog', 'cat', 'goat', 'turkey', 'turkey bird', 'turkeys',
+    ];
     var ia = new ImageAcceptor(rekognition,interesting,secrets,fake);
     ia.setupDefaults();
     var router = express.Router();

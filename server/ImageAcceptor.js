@@ -8,20 +8,32 @@ var ImageAcceptor = function(rek, lookfor, secrets) {
     this.secret = secrets;
 };
 
+/*
 ImageAcceptor.prototype.looksInteresting = function(cs) {
-    var interesting = false;
+    return false;
+};
+*/
+
+ImageAcceptor.prototype.looksInteresting = function(cs) {
     if (cs.hasOwnProperty('aws_results') && 
         cs.aws_results.hasOwnProperty('Labels')) {
         for (var i=0; i< cs.aws_results.Labels.length; i++) {
             var label = cs.aws_results.Labels[i].Name;
             var conf  = cs.aws_results.Labels[i].Confidence;
-            if (conf > 50 && (this.interesting_names.hasOwnProperty(label.toLowerCase()))) {
-                interesting = true;
-                break;
+            if (conf >= 50) {
+                for (var j=0; j<this.interesting_names.length; j++) {
+                    var interesting = new RegExp(
+                        '\\b' + this.interesting_names[j] + '\\b',
+                        'gi'
+                    );
+                    if (label.match(interesting)) {
+                        return true;
+                    }
+                }
             }
         }
     }
-    return interesting;
+    return false;
 };
 
 ImageAcceptor.prototype.setupDefaults = function() {
@@ -43,6 +55,10 @@ ImageAcceptor.prototype.fakeSendToAWS = function(idata, cb) {
         message: 'This is a fake response. We never used AWS Rekognition',
         fakemode: true,
         Labels: [
+            {
+                "Name": "Turkey Bird",
+                "Confidence": "51",
+            },
             {
                 "Name": "Flying Saucer",
                 "Confidence": "100",

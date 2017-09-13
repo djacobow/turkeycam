@@ -33,8 +33,8 @@ var turkeyAlert = function(name,d) {
     var turkey = false;
     if (d &&  d.aws_results && d.aws_results.Labels) {
         d.aws_results.Labels.forEach(function(el) {
-            if (el.Name.match(/turkey/i)) {
-                // turkey = true;
+            if (el.Name.match(/\bturkeys?\b/gi)) {
+                turkey = true;
             }
         });
     }
