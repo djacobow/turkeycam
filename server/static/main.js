@@ -80,11 +80,19 @@ var makeTable = function(name,d) {
         });
         ddiv.appendChild(t);
     }
+    var p, dt, ds;
     if (d && d.date) {
-        var p = document.createElement('p');
-        var dt = new Date(d.date);
-        var ds = dt;
-        p.innerText = ds.toLocaleString();
+        p = document.createElement('p');
+        dt = new Date(d.date);
+        ds = dt;
+        p.innerText = 'last upload: ' + ds.toLocaleString();
+        ddiv.appendChild(p);
+    }
+    if (d && d.ping && d.date) {
+        p = document.createElement('p');
+        dt = new Date(d.ping.date);
+        ds = dt;
+        p.innerText = 'last contact: ' + ds.toLocaleString();
         ddiv.appendChild(p);
     }
 
