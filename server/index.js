@@ -78,6 +78,7 @@ if (require.main === module) {
     var router = express.Router();
 
     router.post('/newimage',      ia.handleImagePost.bind(ia));
+    router.post('/stillhere',     ia.handleStillHere.bind(ia));
     router.get('/cameranames',    ia.handleListGet.bind(ia));
     router.get('/status/:name',   ia.handleStatusGet.bind(ia));
     router.get('/image/:name',    ia.handleImageGet.bind(ia));

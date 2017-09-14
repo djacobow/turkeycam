@@ -104,15 +104,42 @@ ImageAcceptor.prototype.sendToAWS = function(idata, cb) {
 };
 
 
+var looksLegit = function(b,secret) {
+    if (b.hasOwnProperty('token') && 
+        b.hasOwnProperty('camera_name') &&
+        secret.hasOwnProperty(b.camera_name) &&
+        secret[b.camera_name].hasOwnProperty('token') &&
+        (b.token == secret[b.camera_name].token)) {
+        return true;
+    }
+    return false;
+};
+
+
+ImageAcceptor.prototype.handleStillHere = function(req, res) {
+    console.log('ping!');
+    var iaobj = this;
+    var b = req.body;
+    if (looksLegit(b, this.secret)) {
+       var camera_name = b.camera_name;
+       var cstate = this.cstates[camera_name] || null;
+       cstate.ping = {
+           'date': b.date,
+       };
+       res.status(200);
+       res.json({message: 'thanks!' });
+       return;
+    }
+    res.status(403);
+    res.json({ message: 'nope.' });
+};
+
+
 ImageAcceptor.prototype.handleImagePost = function(req, res) {
     console.log('post!');
     var iaobj = this;
     var b = req.body;
-    if (b.hasOwnProperty('token') && 
-        b.hasOwnProperty('camera_name') &&
-        this.secret.hasOwnProperty(b.camera_name) &&
-        this.secret[b.camera_name].hasOwnProperty('token') &&
-        (b.token == this.secret[b.camera_name].token)) {
+    if (looksLegit(b, this.secret)) {
        var camera_name = b.camera_name;
        var cstate = this.cstates[camera_name] || null;
        if (!cstate) {

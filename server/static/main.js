@@ -218,7 +218,7 @@ var startTimer = function() {
         });
     },
     function (err) {
-        window.setTimeout(startTimer, 15000);
+        window.setTimeout(startTimer, 5000);
     });
 };
 
