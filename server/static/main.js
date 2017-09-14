@@ -51,6 +51,10 @@ var turkeyAlert = function(name,d) {
         q.innerText = 'Gobble gobble! Turkey detected!';
         q.style = 'text-decoration: blink; font-size: 200%; color: red;';
         adiv.appendChild(q);
+        try {
+            var r = new Audio('/turkeycam/static/gobble.wav');
+            r.play();
+        } catch(e) {}
     }
 };
 
@@ -140,6 +144,7 @@ var checkData = function(name, cb) {
             console.log('checkData err, missing camera');
             return cb('err missing camera');
         } else if (new_data) {
+            console.log('checkData ok');
             var old_image_date = new Date(old_data.date || 0);
             var new_image_date = new Date(new_data.date);
             var old_ping_date  = old_image_date;

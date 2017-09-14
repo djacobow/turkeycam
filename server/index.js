@@ -11,20 +11,22 @@ aws.config.loadFromPath('./aws.json');
 aws.config.logger = process.stdout;
 
 var port = process.env.TURKEY_PORT || 9080;
-var fake = process.env.TURKEY_FAKE_REKOGNITION || false;
+var fake = process.env.TURKEY_FAKE_REKOGNITION || true;
 
 var simpleSplat = function(res, type, fn) {
     res.sendFile(__dirname + fn);
 };
 
-real_files = { 'async.js':1, 'main.js': 1};
+real_files = { 'async.js':1, 'main.js': 1, 'gobble.wav': 1};
 
 var handleStatic = function(req, res) {
    var name = req.params.name.replace('/','');
    if (real_files[name] || null) {
        var type = 'text/html';
-       if (name.match(/\.js/)) {
+       if (name.match(/\.js$/)) {
            type = 'text/javascript';
+       } else if (name.match(/\.wav$/)) {
+           type = 'audio/wave';
        }
        simpleSplat(res,type, '/static/' + name);
    } else {

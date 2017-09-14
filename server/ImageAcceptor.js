@@ -56,7 +56,7 @@ ImageAcceptor.prototype.fakeSendToAWS = function(idata, cb) {
         fakemode: true,
         Labels: [
             {
-                "Name": "Turkey Bird",
+                "Name": "Blurkey Bird",
                 "Confidence": "51",
             },
             {
@@ -163,7 +163,6 @@ ImageAcceptor.prototype.handleImagePost = function(req, res) {
                message: 'thanks!',
                image_number: cstate.image_number,
            });
-
            if (iaobj.looksInteresting(cstate)) {
                iaobj.saveImage(cstate);
            }
