@@ -80,11 +80,12 @@ var makeTable = function(name,d) {
         });
         ddiv.appendChild(t);
     }
-    var p, dt, ds;
+    var p, dt, ds, latest;
     if (d && d.date) {
         p = document.createElement('p');
         dt = new Date(d.date);
         ds = dt;
+        latest = dt;
         p.innerText = 'last upload: ' + ds.toLocaleString();
         ddiv.appendChild(p);
     }
@@ -92,7 +93,20 @@ var makeTable = function(name,d) {
         p = document.createElement('p');
         dt = new Date(d.ping.date);
         ds = dt;
+        if (dt > latest) latest = dt;
         p.innerText = 'last contact: ' + ds.toLocaleString();
+        ddiv.appendChild(p);
+    }
+    if (latest) {
+        now = new Date();
+        p = document.createElement('p');
+        if ((now - latest) > (5 * 60 * 1000)) {
+            p.innerText = 'Camera is probably DOWN';
+            p.style.color = 'red';
+        } else {
+            p.innerText = 'Camera is probably UP';
+            p.style.color = 'green';
+        }
         ddiv.appendChild(p);
     }
 
