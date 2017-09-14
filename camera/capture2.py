@@ -37,7 +37,8 @@ cfg = {
     },
     'use_pil': False,
     'token': secret['token'],
-    'url': 'https://skunkworks.lbl.gov/turkeycam/newimage',
+    'post_url': 'https://skunkworks.lbl.gov/turkeycam/newimage',
+    'ping_url': 'https://skunkworks.lbl.gov/turkeycam/stillhere',
     'city': 'San Francisco',
     #'tzname': 'US/Pacific',
     'picture_period': 10,
@@ -117,9 +118,12 @@ def takePhotoAndMaybeUpload(ip):
             print('Sameness: {0}, Trailing: {1}'.format(str(sameness),str(trailing_average_sameness)))
             
             trailing_average_sameness += -0.1 * trailing_average_sameness + 0.1 * sameness
+            res = None
             if sameness < 0.90 * trailing_average_sameness:
                 res = uploadImage(idata,ip)
-                print(res)
+            else:
+                res = sayHi(ip)
+            print(res)
 
         last_idata = idata
 
@@ -127,6 +131,18 @@ def takePhotoAndMaybeUpload(ip):
         print('well, that didn\'t work')
         print(e)
 
+
+def sayHi(ip = None):
+    now = datetime.datetime.now()
+
+    data = {
+        'camera_name': secret.get('camera_name',''),
+        'token': cfg['token'],
+        'source': 'turkeyCam',
+        'date': now.isoformat(),
+        'source_ip': ip,
+    }
+    return requests.post(cfg['ping_url'], data = data, timeout=20)
 
 def uploadImage(img, ip = None):
     now = datetime.datetime.now()
@@ -144,7 +160,7 @@ def uploadImage(img, ip = None):
         'source_ip': ip,
         'image_jpeg': base64.b64encode(fstr.getvalue()).decode('utf-8'),
     }
-    return requests.post(cfg['url'], data = data, timeout=60)
+    return requests.post(cfg['post_url'], data = data, timeout=60)
  
 
 
