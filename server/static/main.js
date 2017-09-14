@@ -124,26 +124,49 @@ var getCamList = function(cb) {
 };
 
 var checkData = function(name, cb) {
-    getJSON('/turkeycam/status/' + name, function(err, data) {
-        var current_result = current_results[name];
+    getJSON('/turkeycam/status/' + name, function(err, new_data) {
+        var old_data = current_results[name];
     
         if (err) {
             console.log('checkData err: ' + err);
             return cb('err');
-        } else if (!data || !current_result) {
+        } else if (!new_data || !old_data) {
             console.log('checkData err, missing camera');
             return cb('err missing camera');
-        } else if (data && 
-            (!current_result || 
-             (current_result.date != data.date)) &&
-             data.valid
-           ) {
-            current_results[name] = data;
-            console.log(JSON.stringify(data,null,2));
-            reloadImage(name,data.date);
-            makeTable(name,data);
-            turkeyAlert(name,data);
-            return cb(null,data);
+        } else if (new_data) {
+            var old_image_date = new Date(old_data.date || 0);
+            var new_image_date = new Date(new_data.date);
+            var old_ping_date  = old_image_date;
+            if (old_data.hasOwnProperty('ping')) {
+                old_ping_date = new Date(old_data.ping.date);
+            }
+            var new_ping_date  = old_ping_date;
+            if (new_data.hasOwnProperty('ping')) {
+                new_ping_date = new Date(new_data.ping.date);
+            }
+            var new_image = !old_data || 
+                            (new_image_date > old_image_date);
+            var new_ping  = (new_ping_date > old_ping_date);
+
+            if (false) {
+                console.log('old_image_date: ' + old_image_date);
+                console.log('new_image_date: ' + old_image_date);
+                console.log('old_ping_date: ' + old_ping_date);
+                console.log('new_ping_date: ' + old_ping_date);
+                console.log('new_image: ' + new_image);
+                console.log('new_ping: ' + new_ping);
+            } 
+
+            if (new_image) {
+                reloadImage(name,new_data.date);
+                turkeyAlert(name,new_data);
+            }
+            if (new_image || new_ping) {
+                makeTable(name, new_data);
+            }
+            current_results[name] = new_data;
+            // console.log(JSON.stringify(data,null,2));
+            return cb(null,new_data);
         } else {
             return cb('skip');
         }
