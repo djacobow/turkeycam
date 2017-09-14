@@ -133,6 +133,7 @@ def takePhotoAndMaybeUpload(ip):
 
 
 def sayHi(ip = None):
+    print('sayHi()')
     now = datetime.datetime.now()
 
     data = {
@@ -145,6 +146,7 @@ def sayHi(ip = None):
     return requests.post(cfg['ping_url'], data = data, timeout=20)
 
 def uploadImage(img, ip = None):
+    print('uploadImage()')
     now = datetime.datetime.now()
 
     pilimg = Image.fromarray(img['npimage'],'RGB')
