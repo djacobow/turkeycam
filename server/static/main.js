@@ -80,34 +80,40 @@ var makeTable = function(name,d) {
         });
         ddiv.appendChild(t);
     }
-    var p, dt, ds, latest;
+    var el, ds, latest;
+    var ul = document.createElement('ul');
+    ddiv.appendChild(ul);
     if (d && d.date) {
-        p = document.createElement('p');
-        dt = new Date(d.date);
-        ds = dt;
-        latest = dt;
-        p.innerText = 'last upload: ' + ds.toLocaleString();
-        ddiv.appendChild(p);
+        el = document.createElement('li');
+        ds = new Date(d.date);
+        latest = ds;
+        el.innerText = 'last image: ' + ds.toLocaleString();
+        ul.appendChild(el);
     }
     if (d && d.ping && d.date) {
-        p = document.createElement('p');
-        dt = new Date(d.ping.date);
-        ds = dt;
-        if (dt > latest) latest = dt;
-        p.innerText = 'last contact: ' + ds.toLocaleString();
-        ddiv.appendChild(p);
+        el = document.createElement('li');
+        ds = new Date(d.ping.date);
+        if (ds > latest) latest = ds;
+        el.innerText = 'last ping: ' + ds.toLocaleString();
+        ul.appendChild(el);
+    }
+    if (d && d.source_ip) {
+        el = document.createElement('li');
+        if (ds > latest) latest = dt;
+        el.innerText = 'Camera IP: ' + d.source_ip;
+        ul.appendChild(el);
     }
     if (latest) {
         now = new Date();
-        p = document.createElement('p');
+        el = document.createElement('li');
         if ((now - latest) > (5 * 60 * 1000)) {
-            p.innerText = 'Camera is probably DOWN';
-            p.style.color = 'red';
+            el.innerText = 'Camera is probably DOWN';
+            el.style.color = 'red';
         } else {
-            p.innerText = 'Camera is probably UP';
-            p.style.color = 'green';
+            el.innerText = 'Camera is probably UP';
+            el.style.color = 'green';
         }
-        ddiv.appendChild(p);
+        ul.appendChild(el);
     }
 
 };
