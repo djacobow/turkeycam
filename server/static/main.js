@@ -29,20 +29,26 @@ var getJSON = function(url, cb) {
 };
 
 
-var turkeyAlert = function(name,d) {
-    var turkey = false;
+var haveTurkey = function(d) {
     if (d &&  d.aws_results && d.aws_results.Labels) {
-        d.aws_results.Labels.forEach(function(el) {
-            if (el.Name.match(/\bturkeys?\b/gi)) {
-                turkey = true;
+        for (var i=0; i<d.aws_results.Labels.length; i++) {
+            var el = d.aws_results.Labels[i];
+            if (el.Name.match(/\bturkey|bird|ostritch|poultry|emu|building\b/gi)) {
+                console.log("MATCH: " + el.Name);
+                return true;
+            } else {
             }
-        });
+        }
     }
+    return false;
+};
+
    
+var turkeyAlert = function(name,d) {
     var adiv = camelems[name].alert;
 
     removeChildren(adiv);
-    if (!turkey) {
+    if (!haveTurkey(d)) {
         var p = document.createElement('p');
         p.innerText = 'No turkeys detected.';        
         adiv.appendChild(p);
