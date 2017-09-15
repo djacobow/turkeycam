@@ -10,7 +10,8 @@ var removeChildren = function(n) {
 var reloadImage = function(name,crdate) {
     console.log('reloadImage(' + name + ')');
     camelems[name].img.style.display = 'inline';
-    var img_url = '/turkeycam/image/' + name + '?date=' + encodeURIComponent(crdate);
+    var dt = new Date(crdate).getTime();
+    var img_url = '/turkeycam/image/' + name + '?date=' + encodeURIComponent(dt);
     camelems[name].img.src = img_url;
     camelems[name].img_a.href = img_url;
 };
