@@ -6,6 +6,7 @@ var aws        = require('aws-sdk');
 var secrets    = require('./secret_code.json');
 var fs         = require('fs');
 var ImageAcceptor = require('./ImageAcceptor');
+var camera_params = require('./camera_params.json');
 
 aws.config.loadFromPath('./aws.json');
 aws.config.logger = process.stdout;
@@ -78,11 +79,14 @@ if (require.main === module) {
     ];
     var ia = new ImageAcceptor(rekognition,interesting,secrets,fake);
     ia.setupDefaults();
+    ia.setCameraParams(camera_params);
+
     var router = express.Router();
 
     router.post('/newimage',      ia.handleImagePost.bind(ia));
     router.post('/stillhere',     ia.handleStillHere.bind(ia));
     router.get('/cameranames',    ia.handleListGet.bind(ia));
+    router.get('/camparams/:name',ia.handleParamsGet.bind(ia));
     router.get('/status/:name',   ia.handleStatusGet.bind(ia));
     router.get('/image/:name',    ia.handleImageGet.bind(ia));
     router.get('/',               handleRootGet);

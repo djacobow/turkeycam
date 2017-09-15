@@ -8,6 +8,10 @@ var ImageAcceptor = function(rek, lookfor, secrets) {
     this.secret = secrets;
 };
 
+ImageAcceptor.prototype.setCameraParams = function(cps) {
+    this.cparams = cps;
+};
+
 /*
 ImageAcceptor.prototype.looksInteresting = function(cs) {
     return false;
@@ -113,6 +117,22 @@ var looksLegit = function(b,secret) {
         return true;
     }
     return false;
+};
+
+
+ImageAcceptor.prototype.handleParamsGet = function(req, res) {
+    var b = { camera_name: req.params.name, token: req.query.token };
+    if (looksLegit(b,this.secret)) {
+        res.status(200);
+        if (this.cparams.hasOwnProperty(b.camera_name)) {
+            res.json(this.cparams[b.camera_name]);
+        } else {
+            res.json({});
+        }
+        return;
+    }
+    res.status(403);
+    res.json({ message: 'nyet.' }); 
 };
 
 

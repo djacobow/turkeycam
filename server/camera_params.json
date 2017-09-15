@@ -1,0 +1,8 @@
+{
+    "cam0": {
+        "sameness_adjuster": 0.9
+    },
+    "cam1": {
+        "sameness_adjuster": 0.9
+    }
+}
