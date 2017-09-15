@@ -3,6 +3,10 @@
         "sameness_adjuster": 0.9
     },
     "cam1": {
-        "sameness_adjuster": 0.9
+        "sameness_adjuster": 0.9,
+        "daylight": {
+            "stay_up": true,
+            "city": "San Francisco"
+        }
     }
 }
