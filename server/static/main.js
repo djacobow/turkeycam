@@ -250,8 +250,16 @@ var populateTurkeys = function() {
         for (var i=0; i<data.length; i++) {
             var isrc = '/turkeycam/turkeys/' + data[i];
             var img  = document.createElement('img');
+            img.style.width = '200';
+            img.style.height= '150';
             img.src = isrc;
-            turksdiv.appendChild(img);
+            var a = document.createElement('a');
+            a.href = isrc;
+            a.appendChild(img);
+            var space = document.createElement('span');
+            space.innerText = ' ';
+            turksdiv.appendChild(a);
+            turksdiv.appendChild(space);
         }
     });
 };
