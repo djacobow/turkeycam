@@ -232,10 +232,23 @@ ImageAcceptor.prototype.handleImageGet = function(req, res) {
 
 ImageAcceptor.prototype.saveImage = function(cs) {
     if (cs.valid) {
+        // first save the image
         var nows = (new Date()).toISOString();
         var fn = './images/' + nows + '.jpg';
         var ws = fs.createWriteStream(fn);
         ws.write(cs.image_jpeg);
+        ws.end();
+
+        // then save the metadata
+        fn = './images/' + nows + '.json';
+        ws = fs.createWriteStream(fn);
+        var od = {};
+        var ks = Object.keys(cs);
+        for (var i=0;i<ks.length;i++) {
+            var k =ks[i];
+            if (k != 'image_jpeg') od[k] = cs[k];
+        }
+        ws.write(JSON.stringify(od,null,2));
         ws.end();
     }
 };
