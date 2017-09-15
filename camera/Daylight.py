@@ -14,7 +14,6 @@ class Daylight():
 
 
     def isDaylight(self):
-
         if self.cfg.get('stay_up',False):
             return True
 
