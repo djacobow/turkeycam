@@ -45,6 +45,7 @@ ImageAcceptor.prototype.setupDefaults = function() {
     var cstates = {};
     Object.keys(this.secret).forEach(function(camera_name) {
         cstates[camera_name] = {
+            camera_name: camera_name,
             busy: false,
             valid: false,
             image_number: 0,
