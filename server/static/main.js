@@ -100,7 +100,7 @@ var makeTable = function(name,d) {
         el.innerText = 'last image: ' + ds.toLocaleString();
         ul.appendChild(el);
     }
-    if (d && d.ping && d.date) {
+    if (d && d.ping && d.ping.date) {
         el = document.createElement('li');
         ds = new Date(d.ping.date);
         if (ds > latest) latest = ds;
