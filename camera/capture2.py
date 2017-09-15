@@ -36,6 +36,8 @@ cfg = {
         'shutdown_delay': 90,
         'datetimecmd': '/usr/bin/timedatectl',
     },
+    'config_check_period': 7200,
+    'ping_period': 60,
     'token': secret['token'],
     'camera_name': secret['camera_name'],
     'post_url': url_base + '/newimage',
@@ -123,9 +125,7 @@ def takePhotoAndMaybeUpload(ip):
             res = None
             if sameness < 0.90 * trailing_average_sameness:
                 res = uploadImage(idata,ip)
-            else:
-                res = sayHi(ip)
-            print(res)
+                print(res)
 
         last_idata = idata
 
@@ -199,6 +199,8 @@ def mymain(wdog):
     day = Daylight(cfg['daylight'])
 
     last_shot      = pytz.timezone('utc').localize(datetime.datetime.now())
+    last_cfg_check = pytz.timezone('utc').localize(datetime.datetime.now())
+    last_ping      = pytz.timezone('utc').localize(datetime.datetime.now())
 
     ip = myIP()
     count = 0
@@ -217,9 +219,18 @@ def mymain(wdog):
         if not wdog.battIsOK():
             wdog.shutown()
 
+        did_upload = False
         if now - last_shot > datetime.timedelta(seconds=cfg['picture_period']):
             last_shot = now
-            takePhotoAndMaybeUpload(ip)
+            did_upload = takePhotoAndMaybeUpload(ip)
+
+        if not did_upload and now - last_ping > datetime.timedelta(seconds=cfg['ping_period']):
+            last_ping = now
+            res = sayHi(ip)
+
+        if now - last_cfg_check > datetime.timedelta(seconds=cfg['config_check_period']):
+            last_cfg_check = now
+            configOverride(cfg)
 
         wdog.beatHeart()
 
