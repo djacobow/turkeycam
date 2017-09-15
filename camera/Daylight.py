@@ -6,13 +6,17 @@ import pytz
 from astral import Astral
 
 class Daylight():
-    def __init__(self, icity):
+    def __init__(self, icfg):
         self.a = Astral()
         self.a.solar_depression = 'civil';
-        self.city = self.a[icity]
+        self.city = self.a[icfg['city']]
+        self.cfg  = icfg
 
 
     def isDaylight(self):
+
+        if self.cfg.get('stay_up',False):
+            return True
 
         def dateToSSM(d):
             ssm = (d - d.replace(hour=0, minute=0, second=0, microsecond=0)).total_seconds()
@@ -24,8 +28,9 @@ class Daylight():
         n1 = n0
 
         sun = self.city.sun(date=now, local = True)
-        sunset_ssm  = dateToSSM(sun['sunset'])
-        sunrise_ssm = dateToSSM(sun['sunrise'])
+        sunset_ssm  = self.cfg.get('sunset_ssm', dateToSSM(sun['sunset']))
+        sunrise_ssm = self.cfg.get('sunrise_ssm',dateToSSM(sun['sunrise']))
+
         now_ssm     = dateToSSM(n1) 
         if False:
             print('now_ssm:  ' + str(now_ssm))

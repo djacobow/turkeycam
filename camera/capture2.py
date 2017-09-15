@@ -12,6 +12,7 @@ from skimage.measure import compare_ssim as ssim
 import numpy as np
 from PIL import Image
 import requests
+from urllib.parse import urlencode
 from Wdog import Wdog
 from Daylight import Daylight
 
@@ -21,6 +22,7 @@ trailing_average_sameness = None
 with open('secret_code.json') as fh:
     secret = json.load(fh)
 
+url_base = 'https://skunkworks.lbl.gov/turkeycam'
 
 cfg = {
     'wdog': {
@@ -32,15 +34,16 @@ cfg = {
         'heartbeat_period': 10,
         'heartbeat_low_secs': 5,
         'shutdown_delay': 90,
-        #'heartbeat_ticks': 10,
         'datetimecmd': '/usr/bin/timedatectl',
     },
-    'use_pil': False,
     'token': secret['token'],
-    'post_url': 'https://skunkworks.lbl.gov/turkeycam/newimage',
-    'ping_url': 'https://skunkworks.lbl.gov/turkeycam/stillhere',
-    'city': 'San Francisco',
-    #'tzname': 'US/Pacific',
+    'camera_name': secret['camera_name'],
+    'post_url': url_base + '/newimage',
+    'ping_url': url_base + '/stillhere',
+    'config_url': url_base + '/camparams/' + secret['camera_name'],
+    'daylight': {
+        'city': 'San Francisco',
+    },
     'picture_period': 10,
     'tick_length': 0.5,
     'cam_params': {
@@ -56,7 +59,6 @@ cfg = {
 
 def myIP():
     try:
-        # return requests.get('https://api.ipify.org/?format=json').json()['ip']
         return requests.get('https://ipinfo.io').json()['ip']
     except:
         return 'dunno'
@@ -70,7 +72,7 @@ def captureToBytesRGB():
         for param in cfg['cam_params']:
             setattr(camera,param,cfg['cam_params'][param])
         stream = io.BytesIO()
-        time.sleep(0.5) # this is for the camera to adjust its exposure
+        time.sleep(1) # this is for the camera to adjust its exposure
         print('Capture image')
         camera.capture(stream, format='rgb')
         width = cfg['cam_params']['resolution'][0]
@@ -137,7 +139,7 @@ def sayHi(ip = None):
     now = datetime.datetime.now()
 
     data = {
-        'camera_name': secret.get('camera_name',''),
+        'camera_name': cfg.get('camera_name',''),
         'token': cfg['token'],
         'source': 'turkeyCam',
         'date': now.isoformat(),
@@ -155,7 +157,7 @@ def uploadImage(img, ip = None):
     fstr.seek(0)
 
     data = {
-        'camera_name': secret.get('camera_name',''),
+        'camera_name': cfg.get('camera_name',''),
         'token': cfg['token'],
         'source': 'turkeyCam',
         'date': now.isoformat(),
@@ -167,13 +169,34 @@ def uploadImage(img, ip = None):
 
 
 
+def configOverride(cfg):
+    try:
+        url = cfg['config_url'] + '?' + urlencode({'token':cfg['token']})
+        res = requests.get(url, timeout=30)
+        if res.status_code == 200:
+            data = res.json()
+            for key in data:
+                print('Setting cfg[{0}] = {1}'.format(key,json.dumps(data[key])))
+                cfg[key] = data[key]
+        else:
+            print('Got error code fetching params from server.')
+    except Exception as e:
+        print('Got exception fetching params.')
+        print(e)
+
+
+
+
+
 
 def mymain(wdog):
 
     wdog.setup()
     wdog.wait_for_time_sync()
 
-    day = Daylight(cfg['city'])
+    configOverride(cfg)
+
+    day = Daylight(cfg['daylight'])
 
     last_shot      = pytz.timezone('utc').localize(datetime.datetime.now())
 
@@ -185,8 +208,9 @@ def mymain(wdog):
     while running:
         now = pytz.timezone('utc').localize(datetime.datetime.now())
 
-        #if count > 40:
+        
         if not day.isDaylight():
+        #if False:
             running = False
             wdog.shutdown()
 
