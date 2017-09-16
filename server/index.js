@@ -88,7 +88,7 @@ if (require.main === module) {
 
     router.post('/newimage',      ia.handleImagePost.bind(ia));
     router.post('/stillhere',     ia.handleStillHere.bind(ia));
-    router.post('/setup',         pv.handleProvision.bind(pv));
+    router.post('/setup/:name',   pv.handleProvision.bind(pv));
     router.get('/cameranames',    ia.handleListGet.bind(ia));
     router.get('/camparams/:name',ia.handleParamsGet.bind(ia));
     router.get('/status/:name',   ia.handleStatusGet.bind(ia));
