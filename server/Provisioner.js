@@ -73,12 +73,23 @@ Provisioner.prototype.provTokValid = function(candidate) {
 };
 
 
+function thingInThings(things, kname, kvalue) {
+    var keys = Object.keys(things);
+    for (var i=0; i<keys.length; i++) {
+        var key = keys[i];
+        var kv = things[key].get(kname,null);
+        if (kv && (kv == kvalue)) return true;
+    }
+    return false;
+}
+
 Provisioner.prototype.provision = function(req) {
     var serial  = req.serial_number || '';
     var provtok = req.provtok || '';
     var name    = req.name || '';
 
     var nows = (new Date()).toISOString();
+    var serial_in_use = thingInThings(this.provisioned, 'serial_number', serial);
 
     if (this.provTokValid(provtok)) {
         var existing = this.provisioned[name] || null;
@@ -92,6 +103,8 @@ Provisioner.prototype.provision = function(req) {
            } else {
                return null;
            }
+        } else if (serial_in_use) {
+            return null;
         } else {
             var n = {
                 serial_number: serial,
