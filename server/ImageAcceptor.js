@@ -115,7 +115,7 @@ ImageAcceptor.prototype.sendToAWS = function(idata, cb) {
 
 ImageAcceptor.prototype.handleParamsGet = function(req, res) {
     var b = { camera_name: req.params.name, token: req.query.token };
-    if (this.tokValid(b)) {
+    if (this.pv.tokValid(b)) {
         res.status(200);
         if (this.cparams.hasOwnProperty(b.camera_name)) {
             res.json(this.cparams[b.camera_name]);
