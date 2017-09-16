@@ -73,24 +73,7 @@ Provisioner.prototype.provTokValid = function(candidate) {
 };
 
 
-Provisioner.prototype.handleProvision = function(req, res) {
-    var arg = {
-        name: req.params.name.replace('/',''),
-        serial_number: req.body.serial_number || '',
-        provtok: req.body.provtok || '',
-    };
-    var rv = this.provision(arg);
-    if (rv) {
-        res.status('200');
-        res.json(rv);
-        return;
-    }
-    res.status('403');
-    res.json({message: 'begone!'});
-};
-
 Provisioner.prototype.provision = function(req) {
-    console.log('w');
     var serial  = req.serial_number || '';
     var provtok = req.provtok || '';
     var name    = req.name || '';
@@ -98,12 +81,10 @@ Provisioner.prototype.provision = function(req) {
     var nows = (new Date()).toISOString();
 
     if (this.provTokValid(provtok)) {
-        console.log('X');
         var existing = this.provisioned[name] || null;
         if (existing) {
            if ((existing.provisioning_attempts < MAX_PROV_ATTEMPTS) &&
                (serial == existing.serial_number)) {
-               console.log('Y');
                existing.provisioning_attempts += 1;
                existing.prov_date = nows;
                this.saveProvisioned();
@@ -112,7 +93,6 @@ Provisioner.prototype.provision = function(req) {
                return null;
            }
         } else {
-            console.log('Z');
             var n = {
                 serial_number: serial,
                 camera_name: name,

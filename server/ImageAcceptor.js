@@ -8,6 +8,25 @@ var ImageAcceptor = function(rek, lookfor, pv) {
     this.pv = pv;
 };
 
+
+ImageAcceptor.prototype.handleProvision = function(req, res) {
+    var arg = {
+        name: req.params.name.replace('/',''),
+        serial_number: req.body.serial_number || '',
+        provtok: req.body.provtok || '',
+    };
+    var rv = this.pv.provision(arg);
+    if (rv) {
+        this.getcstate(rv.camera_name);
+        res.status('200');
+        res.json(rv);
+        return;
+    }
+    res.status('403');
+    res.json({message: 'begone!'});
+};
+
+
 ImageAcceptor.prototype.setCameraParams = function(cps) {
     this.cparams = cps;
 };
