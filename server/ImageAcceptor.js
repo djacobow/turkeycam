@@ -8,6 +8,16 @@ var ImageAcceptor = function(rek, lookfor, pv) {
     this.pv = pv;
 };
 
+function copyWithoutKey(ind, banned) {
+    var od = {};
+    var keys = Object.keys(ind);
+    for (var i=0; i<keys.length; i++) {
+        var key = keys[i];
+        if (key != banned) od[key] = ind[key];
+    }
+    return od;
+}
+
 
 ImageAcceptor.prototype.handleProvision = function(req, res) {
     var arg = {
@@ -19,7 +29,8 @@ ImageAcceptor.prototype.handleProvision = function(req, res) {
     if (rv) {
         this.getcstate(rv.camera_name);
         res.status('200');
-        res.json(rv);
+        var sv = copyWithoutKey(rv, 'serial_number');
+        res.json(sv);
         return;
     }
     res.status('403');
