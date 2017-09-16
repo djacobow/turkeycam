@@ -4,6 +4,8 @@ import sys
 import time
 import io
 import datetime
+import string
+import random
 import pytz
 import base64
 import json
@@ -15,14 +17,14 @@ import requests
 from urllib.parse import urlencode
 from Wdog import Wdog
 from Daylight import Daylight
+from SelfProvision import loadCredentials
 
 last_idata = None
 trailing_average_sameness = None
 
-with open('secret_code.json') as fh:
-    secret = json.load(fh)
-
 url_base = 'https://skunkworks.lbl.gov/turkeycam'
+
+creds = loadCredentials('./secret_code.json');
 
 cfg = {
     'wdog': {
@@ -38,11 +40,11 @@ cfg = {
     },
     'config_check_period': 7200,
     'ping_period': 60,
-    'token': secret['token'],
-    'camera_name': secret['camera_name'],
+    'token': creds['token'],
+    'camera_name': creds['camera_name'],
     'post_url': url_base + '/newimage',
     'ping_url': url_base + '/stillhere',
-    'config_url': url_base + '/camparams/' + secret['camera_name'],
+    'config_url': url_base + '/camparams/' + creds['camera_name'],
     'daylight': {
         'city': 'San Francisco',
     },
@@ -188,9 +190,9 @@ def configOverride(cfg):
 
 
 
+def mymain():
 
-def mymain(wdog):
-
+    wdog = Wdog(cfg['wdog'])
     wdog.setup()
     wdog.wait_for_time_sync()
 
@@ -239,9 +241,8 @@ def mymain(wdog):
   
 
 if __name__ == '__main__':
-    wdog = Wdog(cfg['wdog'])
     try:
-        mymain(wdog)
+        mymain()
     except Exception as e:
         print('Whoops!')
         print(e)
