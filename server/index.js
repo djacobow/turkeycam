@@ -3,11 +3,10 @@ var express    = require('express');
 var app        = express();
 var bodyParser = require('body-parser');
 var aws        = require('aws-sdk');
-var secrets    = require('./secret_code.json');
 var fs         = require('fs');
 var ImageAcceptor = require('./ImageAcceptor');
+var Provisioner   = require('./Provisioner');
 var camera_params = require('./camera_params.json');
-
 aws.config.loadFromPath('./aws.json');
 aws.config.logger = process.stdout;
 
@@ -73,11 +72,15 @@ if (require.main === module) {
     var rekognition = null;
     if (!fake) rekognition = new aws.Rekognition();
 
+    var pv = new Provisioner('./provisioned_clients.json',
+                             './provisioning_tokens.json');
+    pv.load();
+
     var interesting = [
         'dog', 'cat', 'goat', 'turkey', 'turkey bird', 'turkeys',
         'deer', 'poultry', 'ostritch', 'emu',
     ];
-    var ia = new ImageAcceptor(rekognition,interesting,secrets,fake);
+    var ia = new ImageAcceptor(rekognition,interesting,pv,fake);
     ia.setupDefaults();
     ia.setCameraParams(camera_params);
 
@@ -85,6 +88,7 @@ if (require.main === module) {
 
     router.post('/newimage',      ia.handleImagePost.bind(ia));
     router.post('/stillhere',     ia.handleStillHere.bind(ia));
+    router.post('/setup',         pv.handleProvision.bind(pv));
     router.get('/cameranames',    ia.handleListGet.bind(ia));
     router.get('/camparams/:name',ia.handleParamsGet.bind(ia));
     router.get('/status/:name',   ia.handleStatusGet.bind(ia));

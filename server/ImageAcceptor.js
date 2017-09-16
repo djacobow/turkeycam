@@ -1,22 +1,16 @@
 var fs = require('fs');
 
-var ImageAcceptor = function(rek, lookfor, secrets) {
+var ImageAcceptor = function(rek, lookfor, pv) {
     this.fake = false;
     if (!rek) this.fake = true;
     this.rekognition = rek;
     this.interesting_names = lookfor;
-    this.secret = secrets;
+    this.pv = pv;
 };
 
 ImageAcceptor.prototype.setCameraParams = function(cps) {
     this.cparams = cps;
 };
-
-/*
-ImageAcceptor.prototype.looksInteresting = function(cs) {
-    return false;
-};
-*/
 
 ImageAcceptor.prototype.looksInteresting = function(cs) {
     if (cs.hasOwnProperty('aws_results') && 
@@ -40,18 +34,28 @@ ImageAcceptor.prototype.looksInteresting = function(cs) {
     return false;
 };
 
-ImageAcceptor.prototype.setupDefaults = function() {
-    console.log('setupDefaults()');
-    var cstates = {};
-    Object.keys(this.secret).forEach(function(camera_name) {
-        cstates[camera_name] = {
-            camera_name: camera_name,
+ImageAcceptor.prototype.getcstate = function(name) {
+    var cs = this.cstates[name] || null;
+    if (!cs) {
+        cs = {
+            camera_name: name,
             busy: false,
             valid: false,
             image_number: 0,
         };
-    });
+        this.cstates[name] = cs;
+    }
+    return cs;
+};
+
+ImageAcceptor.prototype.setupDefaults = function() {
+    console.log('setupDefaults()');
+    var cstates = {};
     this.cstates = cstates;
+    var othis = this;
+    Object.keys(this.pv.getProvisioned()).forEach(function(camera_name) {
+        othis.getcstate(camera_name);
+    });
 };
 
 
@@ -109,21 +113,9 @@ ImageAcceptor.prototype.sendToAWS = function(idata, cb) {
 };
 
 
-var looksLegit = function(b,secret) {
-    if (b.hasOwnProperty('token') && 
-        b.hasOwnProperty('camera_name') &&
-        secret.hasOwnProperty(b.camera_name) &&
-        secret[b.camera_name].hasOwnProperty('token') &&
-        (b.token == secret[b.camera_name].token)) {
-        return true;
-    }
-    return false;
-};
-
-
 ImageAcceptor.prototype.handleParamsGet = function(req, res) {
     var b = { camera_name: req.params.name, token: req.query.token };
-    if (looksLegit(b,this.secret)) {
+    if (this.tokValid(b)) {
         res.status(200);
         if (this.cparams.hasOwnProperty(b.camera_name)) {
             res.json(this.cparams[b.camera_name]);
@@ -141,9 +133,9 @@ ImageAcceptor.prototype.handleStillHere = function(req, res) {
     console.log('ping!');
     var iaobj = this;
     var b = req.body;
-    if (looksLegit(b, this.secret)) {
+    if (this.pv.tokValid(b)) {
        var camera_name = b.camera_name;
-       var cstate = this.cstates[camera_name] || null;
+       var cstate = this.getcstate(camera_name);
        cstate.ping = {
            'date': b.date,
        };
@@ -160,9 +152,9 @@ ImageAcceptor.prototype.handleImagePost = function(req, res) {
     console.log('post!');
     var iaobj = this;
     var b = req.body;
-    if (looksLegit(b, this.secret)) {
+    if (this.pv.tokValid(b)) {
        var camera_name = b.camera_name;
-       var cstate = this.cstates[camera_name] || null;
+       var cstate = this.getcstate(camera_name);
        if (!cstate) {
            res.status('403');
            res.json({message:'unknown camera'});
