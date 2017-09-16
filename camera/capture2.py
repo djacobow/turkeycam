@@ -24,7 +24,7 @@ trailing_average_sameness = None
 
 url_base = 'https://skunkworks.lbl.gov/turkeycam'
 
-creds = loadCredentials('./secret_code.json');
+creds = loadCredentials('./credentials.json');
 
 cfg = {
     'wdog': {
