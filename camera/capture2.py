@@ -28,6 +28,7 @@ url_base = 'https://skunkworks.lbl.gov/turkeycam'
 creds = loadCredentials('./credentials.json');
 
 cfg = {
+    'wdog_use_i2c': False,
     'wdog2': {
         'shutdown_cmd': '/usr/bin/sudo /sbin/shutdown -h now',
         'max_lowbatt_before_shutdown': 4,
@@ -181,15 +182,26 @@ def uploadImage(img, ip = None):
  
 
 
+def configLocalOverride(cfg,fn):
+    try:
+        with open(fn,'r') as fh:
+            data = json.loads(fh.read())
+            for key in data:
+                print('Local override cfg[{0}] = {1}'.format(key,json.dumps(data[key])))
+                cfg[key] = data[key]
+    except Exception as e:
+        print('Got exception reading local overrides');
+        print(e)
 
-def configOverride(cfg):
+
+def configRemoteOverride(cfg):
     try:
         url = cfg['config_url'] + '?' + urlencode({'token':cfg['token']})
         res = requests.get(url, timeout=30)
         if res.status_code == 200:
             data = res.json()
             for key in data:
-                print('Setting cfg[{0}] = {1}'.format(key,json.dumps(data[key])))
+                print('Remote override cfg[{0}] = {1}'.format(key,json.dumps(data[key])))
                 cfg[key] = data[key]
         else:
             print('Got error code fetching params from server.')
@@ -202,8 +214,9 @@ def configOverride(cfg):
 
 
 def mymain():
+    configLocalOverride(cfg, 'local_config.json')
 
-    if cfg.get('wdog2',None):
+    if cfg.get('wdog_use_i2c',False):
         from Wdog2 import Wdog
         wdog = Wdog(cfg['wdog2'])
     else:
@@ -213,7 +226,7 @@ def mymain():
     wdog.setup()
     wdog.wait_for_time_sync()
 
-    configOverride(cfg)
+    configRemoteOverride(cfg)
 
     day = Daylight(cfg['daylight'])
 
