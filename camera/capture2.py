@@ -15,7 +15,8 @@ import numpy as np
 from PIL import Image
 import requests
 from urllib.parse import urlencode
-from Wdog import Wdog
+
+
 from Daylight import Daylight
 from SelfProvision import loadCredentials
 
@@ -27,6 +28,17 @@ url_base = 'https://skunkworks.lbl.gov/turkeycam'
 creds = loadCredentials('./credentials.json');
 
 cfg = {
+    'wdog2': {
+        'shutdown_cmd': '/usr/bin/sudo /sbin/shutdown -h now',
+        'max_lowbatt_before_shutdown': 4,
+        'heartbeat_period': 60,
+        'shutdown_delay': 90,
+        'datetimecmd': '/usr/bin/timedatectl',
+        'allow_clean_shutdown_delay': 30,
+        'shutdown_duration': 60 * 60,
+        'on_resetval': 3 * 60,
+        'off_resetval': 10 * 60,
+    },
     'wdog': {
         'shutdown_pin': 13,
         'heartbeat_pin': 11,
@@ -59,7 +71,6 @@ cfg = {
         'image_effect': 'denoise',
     },
 }
-
 
 def myIP():
     try:
@@ -192,7 +203,13 @@ def configOverride(cfg):
 
 def mymain():
 
-    wdog = Wdog(cfg['wdog'])
+    if cfg.get('wdog2',None):
+        from Wdog2 import Wdog
+        wdog = Wdog(cfg['wdog2'])
+    else:
+        from Wdog import Wdog
+        wdog = Wdog(cfg['wdog'])
+
     wdog.setup()
     wdog.wait_for_time_sync()
 
@@ -214,7 +231,7 @@ def mymain():
 
         
         if not day.isDaylight():
-        #if False:
+        #if True:
             running = False
             wdog.shutdown()
 

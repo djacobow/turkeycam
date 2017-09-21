@@ -20,27 +20,33 @@ class rigmi2c(object):
             return None
 
     def _writeReg(self,cmd,addr,val):
-        addr &= 0xf
-        cmd &= 0xf
-        c  = (cmd << 4) | addr
-        d3 = (val >> 24) & 0xff
-        d2 = (val >> 16) & 0xff
-        d1 = (val >> 8) & 0xff
-        d0 = val & 0xff
-        self.bus.write_i2c_block_data(self.addr,c,[d3,d2,d1,d0])
-        time.sleep(0.20) # necessary to avoid some kind of i2c error
+        try:
+            addr &= 0xf
+            cmd &= 0xf
+            c  = (cmd << 4) | addr
+            d3 = (val >> 24) & 0xff
+            d2 = (val >> 16) & 0xff
+            d1 = (val >> 8) & 0xff
+            d0 = val & 0xff
+            self.bus.write_i2c_block_data(self.addr,c,[d3,d2,d1,d0])
+            time.sleep(0.30) # necessary to avoid some kind of i2c error
+            return True
+        except Exception as e:
+            print('- Error writing to i2c device.');
+            print(e)
+        return False
 
     def setWord(self,addr,bits):
-        self._writeReg(0,addr,bits)
+        return self._writeReg(0,addr,bits)
 
     def setBits(self,addr,bits):
-        self._writeReg(1,addr,bits)
+        return self._writeReg(1,addr,bits)
 
     def clrBits(self,addr,bits):
-        self._writeReg(2,addr,bits)
+        return self._writeReg(2,addr,bits)
 
     def tglBits(self,addr,bits):
-        self._writeReg(3,addr,bits)
+        return self._writeReg(3,addr,bits)
 
 
 
