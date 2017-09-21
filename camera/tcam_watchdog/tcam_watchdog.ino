@@ -30,8 +30,8 @@ const uint32_t STAT_BIT_PWR_ON     = 0x0020;
 
 #define TESTING 1
 #ifdef TESTING
-const uint32_t DEFAULT_ON_TIME     = 20;
-const uint32_t DEFAULT_OFF_TIME    = 20;
+const uint32_t DEFAULT_ON_TIME     = 60;
+const uint32_t DEFAULT_OFF_TIME    = 60;
 #else
 const uint32_t DEFAULT_ON_TIME     = 5 * 60;
 const uint32_t DEFAULT_OFF_TIME    = 5 * 60;
@@ -99,7 +99,7 @@ void setup() {
   rf.set(REG_STATUS,        STAT_BIT_WDOG_EN | STAT_BIT_WAKE_EN | STAT_BIT_PWR_ON);
   rf.set_debug(&Serial);
   last_opattern = rf.get(REG_OUTPUT);
-
+  
   interrupts();
   Serial.begin(9600);
   Serial.println("Heyyo!");
@@ -120,17 +120,14 @@ void loop() {
   uint32_t rx_data;
   uint32_t opattern = rf.get(REG_OUTPUT);
 
-  if (opattern != last_opattern) {
-      Serial.print("New pat: ");
-      Serial.println(opattern,HEX);
-      // digitalWrite(PIN_PWR,  (opattern & OUT_BIT_PWR_ON) ? LOW  : HIGH);
+  if (true) {
+      digitalWrite(PIN_PWR,  (opattern & OUT_BIT_PWR_ON) ? LOW  : HIGH);
       digitalWrite(PIN_LED0, (opattern & OUT_BIT_LED0)   ? HIGH : LOW);
       digitalWrite(PIN_LED1, (opattern & OUT_BIT_LED1)   ? HIGH : LOW);
       digitalWrite(PIN_LED2, (opattern & OUT_BIT_LED2)   ? HIGH : LOW);
+   }
 
-  }
-
-  
+ 
   bool new_second = (now / 1000) != (last_loop / 1000);
   
   if (new_second) {
@@ -140,17 +137,16 @@ void loop() {
     uint32_t rstat   = rf.get(REG_STATUS);
 
     if (true) {
-      Serial.print("On rem:  "); Serial.println(on_rem,HEX);
-      Serial.print("Off rem: "); Serial.println(off_rem,HEX);
-      Serial.print("rstat:   "); Serial.println(rstat,HEX);
-      Serial.print("oput:    "); Serial.println(rf.get(REG_OUTPUT));
-      Serial.println("------");
+      Serial.print("On rem:  "); Serial.print(on_rem);
+      Serial.print(", Off rem: "); Serial.print(off_rem);
+      Serial.print(", rstat: 0x"); Serial.print(rstat,HEX);
+      Serial.print(", oput:  0x"); Serial.println(rf.get(REG_OUTPUT),HEX);
     }
 
-    if (false) {
-      setclrb(opattern, OUT_BIT_LED0, rstat & STAT_BIT_WDOG_FIRED);
-      setclrb(opattern, OUT_BIT_LED1, rstat & STAT_BIT_WAKE_FIRED);
-      setclrb(opattern, OUT_BIT_LED2, (rstat & STAT_BIT_WDOG_EN) && (on_rem < 30));
+    if (true) {
+      setclrb(opattern, OUT_BIT_LED2, rstat & STAT_BIT_WDOG_FIRED);
+      setclrb(opattern, OUT_BIT_LED0, rstat & STAT_BIT_WAKE_FIRED);
+      setclrb(opattern, OUT_BIT_LED1, (rstat & STAT_BIT_WDOG_EN) && (on_rem < 30));
     }
 
     if (rstat & STAT_BIT_PWR_ON) {
@@ -158,7 +154,6 @@ void loop() {
       if (rstat & STAT_BIT_WDOG_EN) {
         if (!on_rem) {
           rstat |= STAT_BIT_WDOG_FIRED;
-          // rstat &= ~STAT_BIT_WDOG_EN;
           opattern &= ~OUT_BIT_PWR_ON;
           rstat &= ~STAT_BIT_PWR_ON;
           off_rem = rf.get(REG_OFF_REM_RESETVAL);
@@ -173,7 +168,6 @@ void loop() {
       if (rstat & STAT_BIT_WAKE_EN) {
         if (!off_rem) {
           rstat |= STAT_BIT_WAKE_FIRED | STAT_BIT_WDOG_EN | STAT_BIT_PWR_ON;
-          // rstat &= ~STAT_BIT_WAKE_EN;
           opattern |= OUT_BIT_PWR_ON;
           on_rem = rf.get(REG_ON_REM_RESETVAL);
         } {
@@ -187,11 +181,11 @@ void loop() {
     rf.set(REG_OFF_REMAINING, off_rem);
     rf.set(REG_STATUS, rstat);
     rf.set(REG_OUTPUT, opattern);
-    last_opattern = opattern;
+
     interrupts();
   }
   
-
+  last_opattern = opattern;
   last_loop = now;
 
   delay(100);
