@@ -39,12 +39,7 @@ class regfile_c {
             return &(registers[addr]);
         };
         REGW update(uint8_t act, uint8_t addr, REGW arg) {
-            /*
-            uint8_t cmd = input >> 16;
-            uint16_t arg = input & 0xffff;
-            uint8_t addr = cmd & (REG_COUNT-1);
-            uint8_t act = (cmd /REG_COUNT) & (REG_COUNT-1);
-            */
+    
             act &= 0x3;
             addr &= (REG_COUNT-1);
             
