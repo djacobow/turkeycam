@@ -22,7 +22,7 @@ consts = {
     'STAT_BIT_WDOG_EN'   : 0x0001,
     'STAT_BIT_WDOG_FIRED': 0x0002,
     'STAT_BIT_WAKE_EN'   : 0x0004,
-    'STAT_BIT_WDOG_FIRED': 0x0008,
+    'STAT_BIT_WAKE_FIRED': 0x0008,
     'STAT_BIT_WDOG_SOON' : 0x0010,
     'STAT_BIT_PWR_ON'    : 0x0020,
 }
@@ -56,6 +56,7 @@ class Wdog:
         self.i2c.setWord(consts['REG_ON_REM_RESETVAL']  , self.cfg['on_resetval'])
         self.i2c.setWord(consts['REG_OFF_REM_RESETVAL'] , self.cfg['off_resetval'])
         self.i2c.setBits(consts['REG_STATUS'], consts['STAT_BIT_WDOG_EN'] | consts['STAT_BIT_WAKE_EN'] | consts['STAT_BIT_PWR_ON'])
+        self.i2c.clrBits(consts['REG_STATUS'], consts['STAT_BIT_WDOG_FIRED'] | consts['STAT_BIT_WAKE_FIRED'])
 
 
     def unsetup(self):

@@ -17,6 +17,10 @@ class rigmi2c(object):
             return rd 
         except Exception as e:
             print(e)
+            try:
+                self.__init__()
+            except Exception as f:
+                pass
             return None
 
     def _writeReg(self,cmd,addr,val):
@@ -34,6 +38,12 @@ class rigmi2c(object):
         except Exception as e:
             print('- Error writing to i2c device.');
             print(e)
+            try:
+                print('- attempting to restart i2c')
+                self.__init__()
+                print(self.readall())
+            except Exception as f:
+                pass
         return False
 
     def setWord(self,addr,bits):
