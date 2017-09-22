@@ -57,12 +57,14 @@ var handleTIKImageGet = function(req, res) {
 };
 
 var handleTIKListGet = function(req, res) {
-    var files = fs.readdir(__dirname + '/images/', function(err, files) {
+    fs.readdir(__dirname + '/images/', function(err, files) {
         if (err) {
             res.json({message: 'Ruh roh, raggy.'});
             return;
         }
         res.status(200);
+        var ff = function(f) { return f.match(/\.jpg$/); };
+        files = files.filter(ff);
         res.json(files);
     });
 };
@@ -77,8 +79,9 @@ if (require.main === module) {
     pv.load();
 
     var interesting = [
-        'dog', 'cat', 'goat', 'turkey', 'turkey bird', 'turkeys',
-        'deer', 'poultry', 'ostritch', 'emu',
+        'cat', 'goat', 'turkey', 'turkey bird', 'turkeys',
+        'deer', 'poultry', 'ostritch', 'emu', 'cougar', 'mountain lion',
+        'lion',
     ];
     var ia = new ImageAcceptor(rekognition,interesting,pv,fake);
     ia.setupDefaults();
