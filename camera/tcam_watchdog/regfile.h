@@ -38,12 +38,12 @@ class regfile_c {
             addr = addr % REG_COUNT;
             return &(registers[addr]);
         };
-        REGW update(uint8_t act, uint8_t addr, REGW arg) {
+        REGW update(uint8_t act, uint8_t addr, REGW arg, bool debug = true) {
     
             act &= 0x3;
             addr &= (REG_COUNT-1);
             
-            if (ser) {
+            if (ser && debug) {
                 ser->print(" arg  "); ser->print(arg,HEX);
                 ser->print(" addr "); ser->print(addr,HEX);
                 ser->print(" act  "); ser->println(act,HEX);
@@ -56,7 +56,7 @@ class regfile_c {
                 default: break;
             }
             REGW rv = registers[addr];
-            if (ser) { ser->print("RF return: "); ser->println(rv,HEX); }
+            if (ser && debug) { ser->print("RF return: "); ser->println(rv,HEX); }
             return rv;
         }
 };

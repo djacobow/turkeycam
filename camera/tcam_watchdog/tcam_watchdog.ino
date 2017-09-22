@@ -3,190 +3,221 @@
 #include "regfile.h"
 #include "ema.h"
 
-
-const uint8_t MY_I2C_ADDR = 42;
-const uint8_t REG_STATUS        = 0;
-const uint8_t REG_OUTPUT        = 1;
-const uint8_t REG_ON_REMAINING  = 2;
-const uint8_t REG_OFF_REMAINING = 3;
-const uint8_t REG_ON_REM_RESETVAL = 4;
+const uint8_t MY_I2C_ADDR        = 42;
+const uint8_t REG_STATUS           = 0;
+const uint8_t REG_OUTPUT           = 1;
+const uint8_t REG_ON_REMAINING     = 2;
+const uint8_t REG_OFF_REMAINING    = 3;
+const uint8_t REG_ON_REM_RESETVAL  = 4;
 const uint8_t REG_OFF_REM_RESETVAL = 5;
 
-const uint8_t PIN_PWR = 6;
+const uint8_t PIN_PWR  = 6;
 const uint8_t PIN_LED0 = 7;
 const uint8_t PIN_LED1 = 8;
 const uint8_t PIN_LED2 = 9;
 
-const uint32_t OUT_BIT_PWR_ON      = 0x0001;
-const uint32_t OUT_BIT_LED0        = 0x0010;
-const uint32_t OUT_BIT_LED1        = 0x0020;
-const uint32_t OUT_BIT_LED2        = 0x0040;
-const uint32_t STAT_BIT_WDOG_EN    = 0x0001;
-const uint32_t STAT_BIT_WDOG_FIRED = 0x0002;
-const uint32_t STAT_BIT_WAKE_EN    = 0x0004;
-const uint32_t STAT_BIT_WAKE_FIRED = 0x0008;
-const uint32_t STAT_BIT_WDOG_SOON  = 0x0010;
-const uint32_t STAT_BIT_PWR_ON     = 0x0020;
+typedef uint32_t reg_t;
 
-#define TESTING 1
+const reg_t   OUT_BIT_PWR_ON      = 0x0001;
+const reg_t   OUT_BIT_LED0        = 0x0010;
+const reg_t   OUT_BIT_LED1        = 0x0020;
+const reg_t   OUT_BIT_LED2        = 0x0040;
+const reg_t   STAT_BIT_WDOG_EN    = 0x0001;
+const reg_t   STAT_BIT_WDOG_FIRED = 0x0002;
+const reg_t   STAT_BIT_WAKE_EN    = 0x0004;
+const reg_t   STAT_BIT_WAKE_FIRED = 0x0008;
+const reg_t   STAT_BIT_WDOG_SOON  = 0x0010;
+const reg_t   STAT_BIT_PWR_ON     = 0x0020;
+
+//#define TESTING 1
 #ifdef TESTING
-const uint32_t DEFAULT_ON_TIME     = 60;
-const uint32_t DEFAULT_OFF_TIME    = 60;
+const reg_t   DEFAULT_ON_TIME     = 60;
+const reg_t   DEFAULT_OFF_TIME    = 60;
 #else
-const uint32_t DEFAULT_ON_TIME     = 5 * 60;
-const uint32_t DEFAULT_OFF_TIME    = 5 * 60;
+const reg_t   DEFAULT_ON_TIME     = 5 * 60;
+const reg_t   DEFAULT_OFF_TIME    = 5 * 60;
 #endif
+const uint8_t  WARN_SECS           = 30;
 
 const size_t rf_size = 8;
-regfile_c<uint32_t, rf_size> rf;
+
+
+
+regfile_c<reg_t, rf_size> rf;
+volatile bool isr_running     = false;
+void          *rf_baseptr;
+bool          handled_receive = false;
+bool          handled_request = false;
+reg_t         last_opattern;
+uint32_t      now, last_loop;
+reg_t         *pon_rem;
+reg_t         *poff_rem;
+reg_t         *prstat;
+reg_t         *poutput;
 
 // there is only one request type, and it is very simple:
 // dump the entire register file. We don't even need to
 // examine the "command"
 void requestEvent() {
-  void *rf0 = rf.getptr(0);
-  Wire.write((uint8_t *)rf0,rf_size * sizeof(uint32_t));
-  Serial.println("requestEvent");
+    isr_running = true;
+    Wire.write((uint8_t *)rf_baseptr,rf_size * sizeof(reg_t));
+    isr_running = false;
+    handled_request = true;
 }
-/*
-void requestEvent() {
-  Wire.write(11);
-}
-*/
+
+
 void receiveEvent(int count) {
-  Serial.println("receiveEvent");
-  if (count == 5) {
-    uint8_t cmd = Wire.read();
-    uint32_t val = 0;
-    for (uint8_t i=0; i<4; i++) {
-      val <<= 8;
-      val |= Wire.read() & 0xff;     
+    isr_running = true;
+    if (count == 5) {
+        uint8_t cmd = Wire.read();
+        reg_t val = 0;
+        for (uint8_t i=0; i<4; i++) {
+            val <<= 8;
+            val |= Wire.read() & 0xff;     
+        }
+        rf.update((cmd >> 4) & 0x0f, cmd & 0xf, val, false);
+    } else {
+        while (count) {
+            uint8_t x = Wire.read();
+            count--;
+        }
     }
-    rf.update((cmd >> 4) & 0x0f, cmd & 0xf, val);
-  } else {
-    while (count) {
-      uint8_t x = Wire.read();
-      count--;
-    }
-  }
+    isr_running = false;
+    handled_receive = true;
 }
 
 
-uint32_t last_opattern;
-uint32_t now = millis();
-uint32_t last_loop = now;
+void setb(reg_t *r, reg_t b) { *r |= b;  };
+void clrb(reg_t *r, reg_t b) { *r &= ~b; };
+void setclrb(reg_t *r, reg_t b, bool c) {
+    if (c) setb(r,b); else clrb(r,b);
+}
+void decr_by(reg_t *p, uint8_t a) {
+    *p = (a > *p) ? 0 : *p - a;
+};
+
+void calcleds(reg_t *pout, 
+              reg_t *pstat, 
+              reg_t *ponrem, 
+              reg_t *poffrem) {
+    setclrb(pout, OUT_BIT_LED2, *pstat & STAT_BIT_WDOG_FIRED);
+    setclrb(pout, OUT_BIT_LED0, *pstat & STAT_BIT_WAKE_FIRED);
+    bool fire_soon = ((*pstat & STAT_BIT_WDOG_EN) &&
+                      (*pstat & STAT_BIT_PWR_ON) &&
+                      (*ponrem < WARN_SECS)) ||
+                     ((*pstat & STAT_BIT_WAKE_EN) &&
+                      !(*pstat & STAT_BIT_PWR_ON) &&
+                      (*poffrem < WARN_SECS));
+    setclrb(pout, OUT_BIT_LED1, fire_soon);
+}
+
+void setoutputs(reg_t *pout) {
+    digitalWrite(PIN_PWR,  (*pout & OUT_BIT_PWR_ON) ? LOW  : HIGH);
+    digitalWrite(PIN_LED0, (*pout & OUT_BIT_LED0)   ? HIGH : LOW);
+    digitalWrite(PIN_LED1, (*pout & OUT_BIT_LED1)   ? HIGH : LOW);
+    digitalWrite(PIN_LED2, (*pout & OUT_BIT_LED2)   ? HIGH : LOW);
+}
+
 
 void setup() {
+    noInterrupts();
 
-  Wire.begin(MY_I2C_ADDR);
-  Wire.onReceive(receiveEvent);
-  Wire.onRequest(requestEvent);
+    Wire.begin(MY_I2C_ADDR);
+    Wire.onReceive(receiveEvent);
+    Wire.onRequest(requestEvent);
 
-  // our output wires
-  pinMode(PIN_PWR, OUTPUT);
-  pinMode(PIN_LED0, OUTPUT);
-  pinMode(PIN_LED1, OUTPUT);
-  pinMode(PIN_LED2, OUTPUT);
+    pinMode(PIN_PWR,  OUTPUT);
+    pinMode(PIN_LED0, OUTPUT);
+    pinMode(PIN_LED1, OUTPUT);
+    pinMode(PIN_LED2, OUTPUT);
 
-  // initialize the register file, start
-  // in shutdon mode
-  rf.clear();
-  rf.set(REG_ON_REMAINING,  DEFAULT_ON_TIME);
-  rf.set(REG_OFF_REMAINING, DEFAULT_OFF_TIME);
-  rf.set(REG_OFF_REM_RESETVAL, DEFAULT_OFF_TIME);
-  rf.set(REG_ON_REM_RESETVAL, DEFAULT_ON_TIME);
-  rf.set(REG_OUTPUT,        OUT_BIT_PWR_ON);
-  rf.set(REG_STATUS,        STAT_BIT_WDOG_EN | STAT_BIT_WAKE_EN | STAT_BIT_PWR_ON);
-  rf.set_debug(&Serial);
-  last_opattern = rf.get(REG_OUTPUT);
-  
-  interrupts();
-  Serial.begin(9600);
-  Serial.println("Heyyo!");
+    pon_rem     = rf.getptr(REG_ON_REMAINING);
+    poff_rem    = rf.getptr(REG_OFF_REMAINING);
+    prstat      = rf.getptr(REG_STATUS);
+    poutput     = rf.getptr(REG_OUTPUT);
+    rf_baseptr  = rf.getptr(0);
 
+    // initialize the register file, start
+    // in shutdon mode
+    rf.clear();
+    rf.set_debug(&Serial);
+    *pon_rem    =  DEFAULT_ON_TIME;
+    *poff_rem   = DEFAULT_OFF_TIME;
+    *poutput    = OUT_BIT_PWR_ON;
+    *prstat     = STAT_BIT_WDOG_EN | 
+                  STAT_BIT_WAKE_EN | 
+                  STAT_BIT_PWR_ON;
+    rf.set(REG_OFF_REM_RESETVAL, DEFAULT_OFF_TIME);
+    rf.set(REG_ON_REM_RESETVAL,  DEFAULT_ON_TIME);
+    last_opattern = *poutput;
+ 
+    now = last_loop = millis(); 
+    interrupts();
+
+    Serial.begin(57600);
+    Serial.println("We're ready to roll!");
 }
 
-void setb(uint32_t &r, uint32_t b) { r |= b;  };
-void clrb(uint32_t &r, uint32_t b) { r &= ~b; };
-void setclrb(uint32_t &r, uint32_t b, bool c) {
-  if (c) setb(r,b); else clrb(r,b);
-}
-
-bool foo = 0;
 
 void loop() {
 
-  now = millis();
-  uint32_t rx_data;
-  uint32_t opattern = rf.get(REG_OUTPUT);
+    now = millis();
+    reg_t *opattern = rf.getptr(REG_OUTPUT);
 
-  if (true) {
-      digitalWrite(PIN_PWR,  (opattern & OUT_BIT_PWR_ON) ? LOW  : HIGH);
-      digitalWrite(PIN_LED0, (opattern & OUT_BIT_LED0)   ? HIGH : LOW);
-      digitalWrite(PIN_LED1, (opattern & OUT_BIT_LED1)   ? HIGH : LOW);
-      digitalWrite(PIN_LED2, (opattern & OUT_BIT_LED2)   ? HIGH : LOW);
-   }
 
+    setoutputs(opattern);
+
+    if (handled_receive) {
+        Serial.println("handled receive"); handled_receive = false;
+    }
+    if (handled_request) {
+        Serial.println("handled request"); handled_request = false;
+    }
  
-  bool new_second = (now / 1000) != (last_loop / 1000);
-  
-  if (new_second) {
-    noInterrupts();
-    uint32_t on_rem  = rf.get(REG_ON_REMAINING);
-    uint32_t off_rem = rf.get(REG_OFF_REMAINING);
-    uint32_t rstat   = rf.get(REG_STATUS);
+    uint8_t seconds_elapsed = (now/1000) - (last_loop/1000);
 
-    if (true) {
-      Serial.print("On rem:  "); Serial.print(on_rem);
-      Serial.print(", Off rem: "); Serial.print(off_rem);
-      Serial.print(", rstat: 0x"); Serial.print(rstat,HEX);
-      Serial.print(", oput:  0x"); Serial.println(rf.get(REG_OUTPUT),HEX);
-    }
 
-    if (true) {
-      setclrb(opattern, OUT_BIT_LED2, rstat & STAT_BIT_WDOG_FIRED);
-      setclrb(opattern, OUT_BIT_LED0, rstat & STAT_BIT_WAKE_FIRED);
-      setclrb(opattern, OUT_BIT_LED1, (rstat & STAT_BIT_WDOG_EN) && (on_rem < 30));
-    }
+    if (seconds_elapsed && !isr_running) {
 
-    if (rstat & STAT_BIT_PWR_ON) {
-      
-      if (rstat & STAT_BIT_WDOG_EN) {
-        if (!on_rem) {
-          rstat |= STAT_BIT_WDOG_FIRED;
-          opattern &= ~OUT_BIT_PWR_ON;
-          rstat &= ~STAT_BIT_PWR_ON;
-          off_rem = rf.get(REG_OFF_REM_RESETVAL);
+        if (true) {
+            Serial.print("On rem:  ");      Serial.print(*pon_rem);
+            Serial.print(", Off rem: ");    Serial.print(*poff_rem);
+            Serial.print(", rstat: 0x");    Serial.print(*prstat,HEX);
+            Serial.print(", poutput:  0x"); Serial.println(*poutput,HEX);
+        }
+
+        calcleds(opattern, prstat, pon_rem, poff_rem);
+
+        if (*prstat & STAT_BIT_PWR_ON) {
+            if (*prstat & STAT_BIT_WDOG_EN) {
+                if (!*pon_rem) {
+                    *prstat    |= STAT_BIT_WDOG_FIRED;
+                    *opattern  &= ~OUT_BIT_PWR_ON;
+                    *prstat    &= ~STAT_BIT_PWR_ON;
+                    *poff_rem  =  rf.get(REG_OFF_REM_RESETVAL);
+                } else {
+                    if (seconds_elapsed > *pon_rem) *pon_rem = 0;
+                    else *pon_rem -= seconds_elapsed;
+                }
+            }  
         } else {
-          on_rem -= 1;
+            if (*prstat & STAT_BIT_WAKE_EN) {
+                if (!*poff_rem) {
+                    *prstat |= STAT_BIT_WAKE_FIRED | 
+                               STAT_BIT_WDOG_EN | 
+                               STAT_BIT_PWR_ON;
+                    *opattern |= OUT_BIT_PWR_ON;
+                    *pon_rem = rf.get(REG_ON_REM_RESETVAL);
+                } else {
+                    decr_by(poff_rem, seconds_elapsed);
+                }
+            }
         }
-      }
-
-    } else {
-      
-       
-      if (rstat & STAT_BIT_WAKE_EN) {
-        if (!off_rem) {
-          rstat |= STAT_BIT_WAKE_FIRED | STAT_BIT_WDOG_EN | STAT_BIT_PWR_ON;
-          opattern |= OUT_BIT_PWR_ON;
-          on_rem = rf.get(REG_ON_REM_RESETVAL);
-        } {
-          if (!on_rem) off_rem -= 1;
-        }
-      
-      }
     }
-    
-    rf.set(REG_ON_REMAINING, on_rem);
-    rf.set(REG_OFF_REMAINING, off_rem);
-    rf.set(REG_STATUS, rstat);
-    rf.set(REG_OUTPUT, opattern);
 
-    interrupts();
-  }
-  
-  last_opattern = opattern;
-  last_loop = now;
+    last_opattern = *opattern;
+    last_loop = now;
 
-  delay(100);
+    delay(250);
+    Serial.print('.');
 };
