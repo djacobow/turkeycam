@@ -77,7 +77,7 @@ function thingInThings(things, kname, kvalue) {
     var keys = Object.keys(things);
     for (var i=0; i<keys.length; i++) {
         var key = keys[i];
-        var kv = things[key].get(kname,null);
+        var kv = things[key][kname] || null;
         if (kv && (kv == kvalue)) return true;
     }
     return false;
