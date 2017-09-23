@@ -37,7 +37,7 @@ def selfProvision(url):
     return None
 
 
-def loadCredentials(fn):
+def loadCredentials(fn, url_base):
     try:
         with open(fn,'r') as fh:
             creds = json.load(fh)
