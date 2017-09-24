@@ -34,7 +34,7 @@ var haveTurkey = function(d) {
     if (d &&  d.aws_results && d.aws_results.Labels) {
         for (var i=0; i<d.aws_results.Labels.length; i++) {
             var el = d.aws_results.Labels[i];
-            if (el.Name.match(/\bturkey|bird|ostritch|poultry|emu\b/gi)) {
+            if (el.Name.match(/\bturkey|ostritch|poultry|emu\b/gi)) {
                 console.log("MATCH: " + el.Name);
                 return true;
             } else {
