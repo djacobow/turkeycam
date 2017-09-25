@@ -1,5 +1,8 @@
 #include <Arduino.h>
 #include <Wire.h>
+#include <avr/wdt.h>
+#include <avr/sleep.h>
+#include <avr/power.h>
 #include "regfile.h"
 #include "ema.h"
 
@@ -49,7 +52,6 @@ void          *rf_baseptr;
 bool          handled_receive = false;
 bool          handled_request = false;
 reg_t         last_opattern;
-uint32_t      now, last_loop;
 reg_t         *pon_rem;
 reg_t         *poff_rem;
 reg_t         *prstat;
@@ -73,7 +75,7 @@ void receiveEvent(int count) {
         reg_t val = 0;
         for (uint8_t i=0; i<4; i++) {
             val <<= 8;
-            val |= Wire.read() & 0xff;     
+            val |= Wire.read() & 0xff;    
         }
         rf.update((cmd >> 4) & 0x0f, cmd & 0xf, val, false);
     } else {
@@ -96,9 +98,9 @@ void decr_by(reg_t *p, uint8_t a) {
     *p = (a > *p) ? 0 : *p - a;
 };
 
-void calcleds(reg_t *pout, 
-              reg_t *pstat, 
-              reg_t *ponrem, 
+void calcleds(reg_t *pout,
+              reg_t *pstat,
+              reg_t *ponrem,
               reg_t *poffrem) {
     setclrb(pout, OUT_BIT_LED2, *pstat & STAT_BIT_WDOG_FIRED);
     setclrb(pout, OUT_BIT_LED0, *pstat & STAT_BIT_WAKE_FIRED);
@@ -118,6 +120,41 @@ void setoutputs(reg_t *pout) {
     digitalWrite(PIN_LED2, (*pout & OUT_BIT_LED2)   ? HIGH : LOW);
 }
 
+
+void timer2_setup() {
+    TCCR2A = 0;
+    TCCR2B = 0;
+    TCNT2  = 0;
+    // This yields approximately 31.0020 Hz
+    OCR2A  = 252;
+    TCCR2A = (1 << WGM20);
+    TCCR2B = (1 << WGM22) | (1 << CS22) | (1 << CS21) | (1 << CS20);
+    TIMSK2 |= (1 << OCIE2A);
+}
+
+void setup_sleep() {
+    ADCSRA = 0;
+    power_adc_disable();    // don't need ADC
+    power_spi_disable();    // don't need SPI
+    //power_timer0_disable(); // don't need millis() clock
+    power_timer1_disable(); // don't need TIMER1
+    // DO need: timer1, TWI
+}
+
+void enter_sleep() {
+    // :-( Idle is the only sleep mode I've been able to get
+    // to work correctly with TWI (i2c), even though the deep
+    // sleep modes are supposed to respond to TWI address and
+    // wake the processor in only a few cycles.
+    set_sleep_mode(SLEEP_MODE_IDLE);
+    noInterrupts();
+    sleep_enable();
+    sleep_bod_disable();
+    setup_sleep();
+    interrupts();
+    sleep_cpu();
+    sleep_disable();
+}
 
 void setup() {
     noInterrupts();
@@ -144,14 +181,18 @@ void setup() {
     *pon_rem    =  DEFAULT_ON_TIME;
     *poff_rem   = DEFAULT_OFF_TIME;
     *poutput    = OUT_BIT_PWR_ON;
-    *prstat     = STAT_BIT_WDOG_EN | 
-                  STAT_BIT_WAKE_EN | 
+    *prstat     = STAT_BIT_WDOG_EN |
+                  STAT_BIT_WAKE_EN |
                   STAT_BIT_PWR_ON;
     rf.set(REG_OFF_REM_RESETVAL, DEFAULT_OFF_TIME);
     rf.set(REG_ON_REM_RESETVAL,  DEFAULT_ON_TIME);
     last_opattern = *poutput;
- 
-    now = last_loop = millis(); 
+
+    wdt_enable(WDTO_8S);
+    timer2_setup();
+
+    setup_sleep();
+
     interrupts();
 
     Serial.begin(57600);
@@ -159,11 +200,35 @@ void setup() {
 }
 
 
-void loop() {
+uint8_t tick_count = 0;
 
-    now = millis();
+ISR(TIMER2_COMPA_vect) {
+    tick_count += 1;
+};
+
+
+#ifdef CALIBRATING_TICKER
+uint32_t last_millis = 0;
+ema_c<double, double, 1, 200> averager;
+#endif
+
+void timer_routine() {
+   
     reg_t *opattern = rf.getptr(REG_OUTPUT);
 
+#ifdef CALIBRATING_TICKER
+    static bool first = true;
+    uint32_t now = millis();
+    if (first) {
+        averager.init(1000);
+        first = false;
+    } else {
+        uint32_t diff = now - last;
+        double avg = 100.0 * averager.update(diff);
+        Serial.print(avg);
+    }   
+    last = now;
+#endif
 
     setoutputs(opattern);
 
@@ -173,8 +238,8 @@ void loop() {
     if (handled_request) {
         Serial.println("handled request"); handled_request = false;
     }
- 
-    uint8_t seconds_elapsed = (now/1000) - (last_loop/1000);
+
+    const uint8_t seconds_elapsed = 1;
 
 
     if (seconds_elapsed && !isr_running) {
@@ -199,12 +264,12 @@ void loop() {
                     if (seconds_elapsed > *pon_rem) *pon_rem = 0;
                     else *pon_rem -= seconds_elapsed;
                 }
-            }  
+            } 
         } else {
             if (*prstat & STAT_BIT_WAKE_EN) {
                 if (!*poff_rem) {
-                    *prstat |= STAT_BIT_WAKE_FIRED | 
-                               STAT_BIT_WDOG_EN | 
+                    *prstat |= STAT_BIT_WAKE_FIRED |
+                               STAT_BIT_WDOG_EN |
                                STAT_BIT_PWR_ON;
                     *opattern |= OUT_BIT_PWR_ON;
                     *pon_rem = rf.get(REG_ON_REM_RESETVAL);
@@ -216,8 +281,20 @@ void loop() {
     }
 
     last_opattern = *opattern;
-    last_loop = now;
 
-    delay(250);
-    Serial.print('.');
+    wdt_reset();
 };
+
+
+uint16_t loops = 0;
+
+void loop() {
+    uint8_t ticks_per_second = 31;
+    if (loops == 16000) ticks_per_second = 32;
+    if (tick_count >= ticks_per_second) {
+        tick_count = 0;
+        timer_routine();
+    }
+    loops += 1;
+    enter_sleep();
+}
