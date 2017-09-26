@@ -39,6 +39,8 @@ cfg = {
         'shutdown_duration': 60 * 60,
         'on_resetval': 3 * 60,
         'off_resetval': 10 * 60,
+        'timesync_wait_iter_delay': 5,
+        'timesync_wait_max': 180,
     },
     'wdog': {
         'shutdown_pin': 13,

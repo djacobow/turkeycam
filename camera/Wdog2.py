@@ -99,7 +99,10 @@ class Wdog:
 
     def wait_for_time_sync(self):
         ready = False
-        while not ready:
+        max_iters = int(self.cfg['timesync_wait_max'] / self.cfg['timesync_wait_iter_delay'])
+        itr = 0;
+        self.i2c.setWord(consts['REG_ON_REMAINING'], self.cfg['timesync_wait_max'] + 30)
+        while not ready and itr < max_iters:
             process = subprocess.Popen(self.cfg['datetimecmd'].split(), stdout=subprocess.PIPE)
             output = [x.decode('ascii') for x in process.communicate()[0].splitlines() ]
 
@@ -109,6 +112,11 @@ class Wdog:
                     ready = True
             if not ready:
                 print('Waiting for clock to be ready.')
-                time.sleep(5)
+                time.sleep(self.cfg['timesync_wait_iter_delay'])
+        # if we haven't synced in three minutes, it's probably because the network is not 
+        # coming up. Let's just give up but at least shut down gracefully to try later.
+        if not ready:
+            self.shutdown()
+
 
 
