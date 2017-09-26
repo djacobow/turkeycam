@@ -129,6 +129,8 @@ def takePhotoAndMaybeUpload(ip):
         idata = captureToBytesRGB()
         sameness = compareImages(idata, last_idata)
 
+        do_upload = False
+
         if sameness is not None:
             if trailing_average_sameness is None:
                 trailing_average_sameness = sameness
@@ -138,8 +140,13 @@ def takePhotoAndMaybeUpload(ip):
             trailing_average_sameness += -0.1 * trailing_average_sameness + 0.1 * sameness
             res = None
             if sameness < 0.90 * trailing_average_sameness:
-                res = uploadImage(idata,ip)
-                print(res)
+                do_upload = True
+        else:
+            do_upload = True
+
+        if do_upload:
+            res = uploadImage(idata,ip)
+            print(res)
 
         last_idata = idata
 
