@@ -237,50 +237,6 @@ var makeCamDivs = function(camlist,cb) {
     return cb();
 };
 
-var populateTurkeys = function() {
-    var turksdiv = document.getElementById('turksdiv');
-    removeChildren(turksdiv);
-    getJSON('/turkeycam/turkeys/list', function(err, data) {
-        if (err) {
-            turksdiv.innerText += 'Error getting turkey list.';
-            return;
-        }
-        if (!data.length) {
-            turksdiv.innerText += 'No turkeys to show.';
-        }
-        for (var i=0; i<data.length; i++) {
-            var isrc = '/turkeycam/turkeys/' + data[i];
-            var img  = document.createElement('img');
-            img.style.width = '200';
-            img.style.height= '150';
-            img.src = isrc;
-            var a = document.createElement('a');
-            a.href = isrc;
-            a.appendChild(img);
-            var space = document.createElement('span');
-            space.innerText = ' ';
-            turksdiv.appendChild(a);
-            turksdiv.appendChild(space);
-        }
-    });
-};
-
-
-var addShowTurkeysButton = function() {
-    var bottomdiv = document.getElementById('bottomdiv');
-    var showbutton = document.createElement('button');
-    showbutton.innerText = 'Show collected turkeys.';
-    showbutton.addEventListener('click', populateTurkeys);
-    var hr = document.createElement('hr');
-    var turksdiv = document.createElement('div');
-    turksdiv.id = 'turksdiv';
-    bottomdiv.appendChild(showbutton);
-    bottomdiv.appendChild(hr);
-    bottomdiv.appendChild(turksdiv);
-    
-};
-
-
 var startTimer = function() {
     var camlist = Object.keys(camelems);
     async.each(camlist, function(camn,cb) {
@@ -299,7 +255,6 @@ var startTimer = function() {
 getCamList(function(err,incams) {
     if (!err) {
         makeCamDivs(incams, function() {
-            addShowTurkeysButton();
             startTimer();
         });
     }

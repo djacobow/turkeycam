@@ -17,7 +17,7 @@ var simpleSplat = function(res, type, fn) {
     res.sendFile(__dirname + fn);
 };
 
-real_files = { 'async.js':1, 'main.js': 1, 'gobble.wav': 1};
+real_files = { 'async.js':1, 'main.js': 1, 'gobble.wav': 1, 'turkeys.js':1, 'helpers.js':1};
 
 var handleStatic = function(req, res) {
    var name = req.params.name.replace('/','');
@@ -40,6 +40,10 @@ var handleRootGet = function(req, res) {
     simpleSplat(res,'text/html', '/static/index.html');
 };
 
+var handleTurkeysGet = function(req, res) {
+    simpleSplat(res,'text/html', '/static/turkeys.html');
+};
+
 var handleTIKImageGet = function(req, res) {
     var name = req.params.name.replace('/','');
     fs.access(__dirname + '/images/' + name, 
@@ -57,15 +61,23 @@ var handleTIKImageGet = function(req, res) {
 };
 
 var handleTIKListGet = function(req, res) {
+    var rv = {};
     fs.readdir(__dirname + '/images/', function(err, files) {
         if (err) {
             res.json({message: 'Ruh roh, raggy.'});
             return;
         }
         res.status(200);
-        var ff = function(f) { return f.match(/\.jpg$/); };
-        files = files.filter(ff);
-        res.json(files);
+        var re = /(.*)\.(jpg|json)$/;
+        for (var i=0;i<files.length; i++) {
+            var match = re.exec(files[i]);
+            if (match) {
+                var x = rv[match[1]];
+                if (!x) rv[match[1]] = {};
+                rv[match[1]][match[2]] = match[0];
+            }
+        }
+        res.json(rv);
     });
 };
 
@@ -100,6 +112,7 @@ if (require.main === module) {
     router.get('/static/:name',   handleStatic);
     router.get('/turkeys/list',   handleTIKListGet);
     router.get('/turkeys/:name/', handleTIKImageGet);
+    router.get('/turkeys',        handleTurkeysGet);
 
     app.use(bodyParser.urlencoded({extended: true, limit: '50mb'}));
     app.use(bodyParser.json({limit:'50mb'}));
