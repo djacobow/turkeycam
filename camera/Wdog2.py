@@ -75,11 +75,12 @@ class Wdog:
 
 
 
-    def shutdown(self):
+    def shutdown(self, time_to_light = None):
 
         # First, just wait for shutdown_delay seconds. This is really only allow
         # for David to stop shutdowns before they actually complete while debugging.
-        print('Shutting down in ' + str(self.cfg['shutdown_delay']) + ' seconds!')
+        print('Shutting down in {0} seconds!'.format(str(self.cfg['shutdown_delay'])))
+        print('Shutdown will last {0} seconds'.format(str(time_to_light)))
         self.i2c.setWord(consts['REG_ON_REMAINING'], self.cfg['shutdown_delay'] + 30)
         st = datetime.datetime.now()
         while (datetime.datetime.now() - st).seconds < self.cfg['shutdown_delay']:
@@ -88,7 +89,10 @@ class Wdog:
 
         print('Telling watchdog to turn off power.')
         self.i2c.setWord(consts['REG_ON_REMAINING'], self.cfg['allow_clean_shutdown_delay']);
-        self.i2c.setWord(consts['REG_OFF_REM_RESETVAL'], self.cfg['shutdown_duration'])
+        shutdown_duration = self.cfg['shutdown_duration']
+        if time_to_light is not None:
+            shutdown_duration = time_to_light
+        self.i2c.setWord(consts['REG_OFF_REM_RESETVAL'], time_to_light)
 
         if True:
             print('Shutting down.')

@@ -61,7 +61,8 @@ class Wdog:
                 print('hb_START');
 
 
-    def shutdown(self):
+    def shutdown(self,time_to_light):
+        # the non-i2c watchdog cannot use the time_to_light value, so we ignore it
 
         print('Shutting down in ' + str(self.cfg['shutdown_delay']) + ' seconds!')
         st = datetime.datetime.now()

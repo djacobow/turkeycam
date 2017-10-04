@@ -252,10 +252,11 @@ def mymain():
         now = pytz.timezone('utc').localize(datetime.datetime.now())
 
         
-        if not day.isDaylight():
+        time_to_light = day.timeToSunUp()
+        if time_to_light != 0:
         #if True:
             running = False
-            wdog.shutdown()
+            wdog.shutdown(time_to_light)
 
         if not wdog.battIsOK():
             wdog.shutown()
