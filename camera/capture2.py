@@ -73,6 +73,11 @@ cfg = {
         'vflip': False,
         'image_effect': 'denoise',
     },
+    # if we get a series of bad network responses, either the server
+    # or the network is down. We will just shutdown and try again in 
+    # a few minutes
+    'max_consec_net_errs': 10,
+    'net_reboot_off_period': 180,
 }
 
 def myIP():
@@ -247,6 +252,7 @@ def mymain():
     count = 0
     running = True;
     batt_nok_count = 0
+    consec_net_errs = 0
 
     while running:
         now = pytz.timezone('utc').localize(datetime.datetime.now())
@@ -261,6 +267,9 @@ def mymain():
         if not wdog.battIsOK():
             wdog.shutown()
 
+        if consec_net_errs > cfg['max_consec_net_errs']:
+            wdog.shutdown(cfg['net_reboot_off_period']);
+
         did_upload = False
         if now - last_shot > datetime.timedelta(seconds=cfg['picture_period']):
             last_shot = now
@@ -269,6 +278,10 @@ def mymain():
         if not did_upload and now - last_ping > datetime.timedelta(seconds=cfg['ping_period']):
             last_ping = now
             res = sayHi(ip)
+            if res.status_code == 200:
+                consec_net_errs = 0
+            else:
+                consec_net_errs += 1
 
         if now - last_cfg_check > datetime.timedelta(seconds=cfg['config_check_period']):
             last_cfg_check = now

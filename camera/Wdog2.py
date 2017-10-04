@@ -117,6 +117,7 @@ class Wdog:
             if not ready:
                 print('Waiting for clock to be ready.')
                 time.sleep(self.cfg['timesync_wait_iter_delay'])
+            itr += 1
         # if we haven't synced in three minutes, it's probably because the network is not 
         # coming up. Let's just give up but at least shut down gracefully to try later.
         if not ready:
