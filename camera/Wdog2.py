@@ -91,7 +91,7 @@ class Wdog:
         self.i2c.setWord(consts['REG_ON_REMAINING'], self.cfg['allow_clean_shutdown_delay']);
         shutdown_duration = self.cfg['shutdown_duration']
         if time_to_light is not None:
-            shutdown_duration = time_to_light
+            shutdown_duration = int(time_to_light)
         self.i2c.setWord(consts['REG_OFF_REM_RESETVAL'], time_to_light)
 
         if True:

@@ -62,10 +62,10 @@ class Daylight():
 
         if now_ssm < sunrise_ssm:
             #print("before sunrise")
-            return sunrise_ssm - now_ssm
+            return int(sunrise_ssm - now_ssm)
         elif now_ssm > sunset_ssm:
             #print("after sunset, now: {0} sunset {1} tomorrow sunrise {2}".format(now_ssm,sunset_ssm,tomorrow_sunrise_ssm))
-            return 24*60*60 - now_ssm + tomorrow_sunrise_ssm
+            return int(24*60*60 - now_ssm + tomorrow_sunrise_ssm)
         else:
             #print("sun is up")
             return 0
