@@ -297,7 +297,11 @@ void setup() {
 
 void loop() {
     uint8_t ticks_per_second = 31;
-    if (loops == 16000) ticks_per_second = 32; // leap-tick
+    if (loops == 16000) {
+        // leap-tick to make time a bit more accurate
+        ticks_per_second = 32; 
+        loops = 0;
+    }
     if (tick_count >= ticks_per_second) {
         tick_count = 0;
         timer_routine();
