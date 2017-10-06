@@ -41,9 +41,14 @@ Provisioner.prototype.tokValid = function(b) {
     if (b.hasOwnProperty('token') && 
         b.hasOwnProperty('camera_name') &&
         this.provisioned.hasOwnProperty(b.camera_name) &&
-        this.provisioned[b.camera_name].hasOwnProperty('token') &&
-        (b.token == this.provisioned[b.camera_name].token)) {
-        return true;
+        this.provisioned[b.camera_name].hasOwnProperty('tok_hash') &&
+        this.provisioned[b.camera_name].hasOwnProperty('serial_number') &&
+        this.provisioned[b.camera_name].hasOwnProperty('salt')) {
+        var hash = this.hash(b.token,
+                            [this.provisioned[b.camera_name].serial_number,
+                             this.provisioned[b.camera_name].salt,
+                            ]);
+        return hash === this.provisioned[b.camera_name].tok_hash;
     }
     return false;
 };
@@ -83,6 +88,30 @@ function thingInThings(things, kname, kvalue) {
     return false;
 }
 
+Provisioner.prototype.create_new = function(name, serial, nows) {
+    var new_token = this.makeRandString(64);
+    var new_salt  = this.makeRandString(64);
+    var new_hash  = this.hash(new_token,[serial,new_salt]);
+    var rv = {
+        new_entry: {
+            serial_number: serial,
+            camera_name: name,
+            provisioning_attempts: 1,
+            prov_date: nows,
+            salt: new_salt,
+            tok_hash: new_hash,
+        },
+        return_data: {
+            serial_number: serial,
+            camera_name: name,
+            provisioning_attempts: 1,
+            prov_date: nows,
+            token: new_token,
+        },
+    };
+    return rv;
+};
+
 Provisioner.prototype.provision = function(req) {
     var serial  = req.serial_number || '';
     var provtok = req.provtok || '';
@@ -106,21 +135,22 @@ Provisioner.prototype.provision = function(req) {
         } else if (serial_in_use) {
             return null;
         } else {
-            var n = {
-                serial_number: serial,
-                camera_name: name,
-                provisioning_attempts: 1,
-                prov_date: nows,
-                token: this.makeRandString(64),
-            };
-            this.provisioned[name] = n;
+            var d = this.create_new(name, serial, nows);
+            this.provisioned[name] = d.new_entry;
             this.saveProvisioned();
-            return n;
+            return r_data.return_data;
         }
     }
     return null;
 };
 
+Provisioner.prototype.hash = function(password, salts) {
+    var hash = crypto.createHmac('sha512', password);
+    for (var i=0; i<salts.length; i++) {
+        hash.update(salts[i]);
+    }
+    return hash.digest('hex');
+};
 
 Provisioner.prototype.saveProvisioned = function() {
     try {
