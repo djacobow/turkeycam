@@ -108,10 +108,12 @@ var makeTable = function(name,d) {
         el.innerText = 'last ping: ' + ds.toLocaleString();
         ul.appendChild(el);
     }
-    if (d && d.source_ip) {
+    if (d && (d.source_ip || d.ping.source_ip)) {
+        ip = d.source_ip;
+        if (!ip) ip = d.ping.source_ip;
         el = document.createElement('li');
         if (ds > latest) latest = dt;
-        el.innerText = 'Camera IP: ' + d.source_ip;
+        el.innerText = 'Camera IP: ' + ip;
         ul.appendChild(el);
     }
     if (latest) {
