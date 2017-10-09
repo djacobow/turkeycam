@@ -206,7 +206,7 @@ var makeCamDivs = function(camlist,cb) {
         cam_name.innerText = "Camera: " + cname;
         cam_nam_div.appendChild(cam_name);
         var cam_img_div = document.createElement('div');
-        cam_img_div.style = "width: 801px; float: left;";
+        cam_img_div.style = "width: 805px; float: left;";
         var cam_img     = document.createElement('img');
         cam_img.style = "width: 800px; height: 600px;";
         cam_img.style.display = 'none';
@@ -215,9 +215,9 @@ var makeCamDivs = function(camlist,cb) {
         cam_img_div.appendChild(cam_img_a);
         cam_img_a.appendChild(cam_img);
         var cam_dta_div = document.createElement('div');
-        cam_dta_div.style = "margin-left: 801px;";
+        cam_dta_div.style = "margin-left: 810px;";
         var cam_trk_div = document.createElement('div');
-        cam_trk_div.style = "margin-left: 801px;";
+        cam_trk_div.style = "margin-left: 810px;";
         cam_top_div.appendChild(cam_nam_div);
         cam_top_div.appendChild(cam_img_div);
         cam_top_div.appendChild(cam_dta_div);

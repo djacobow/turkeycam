@@ -38,8 +38,9 @@ var populateTurkeys = function() {
             var isrc = '/turkeycam/turkeys/' + data[date].jpg;
             if (isrc) {
                 var img  = document.createElement('img');
-                img.style.width = '600';
-                img.style.height= '450';
+                img.style.display = 'block';
+                img.style.width = '100%';
+                //img.style.height= '100%';
                 img.src = isrc;
                 var a = document.createElement('a');
                 a.href = isrc;
