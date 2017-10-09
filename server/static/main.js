@@ -83,7 +83,7 @@ var makeTable = function(name,d) {
             td0 = document.createElement('td');
             td1 = document.createElement('td');
             td0.innerText = el.Name;
-            var conf = Math.floor((parseFloat(el.Confidence) * 100) + 0.5) / 100;
+            var conf = Math.floor((parseFloat(el.Confidence) * 10) + 0.5) / 10;
             td1.innerText = conf.toString();
             r.appendChild(td0);
             r.appendChild(td1);
@@ -201,7 +201,10 @@ var makeCamDivs = function(camlist,cb) {
         var cam_top_div = document.createElement('div');
         cam_top_div.style = "float: left; width: 100%;";
         var cam_nam_div = document.createElement('div');
-        cam_nam_div.innerText = "Camera: " + cname;
+        var cam_name = document.createElement('span');
+        cam_name.style = "font-size: 150%;";
+        cam_name.innerText = "Camera: " + cname;
+        cam_nam_div.appendChild(cam_name);
         var cam_img_div = document.createElement('div');
         cam_img_div.style = "width: 801px; float: left;";
         var cam_img     = document.createElement('img');
