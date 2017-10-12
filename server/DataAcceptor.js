@@ -32,18 +32,27 @@ DataAcceptor.prototype.setupRoutes = function(router) {
 
 DataAcceptor.prototype.setHook = function(name,func) {
     if (name && name.length && (typeof func === 'function')) {
-        this.hooks[name] = func;
+        if (this.hooks.hasOwnProperty(name)) {
+            this.hooks[name].push(func);
+        } else {
+            this.hooks[name] = [ func ];
+        }
     } else {
         console.warn('hook not set for ' + name);
     }
 };
 
 DataAcceptor.prototype.fireHook = function(name, data) {
-    if (this.hooks.hasOwnProperty(name)) {
-        try {
-            this.hooks[name](name, data);
-        } catch (e) {
-            console.log(e);
+    // maybe fire these async?
+    var hooks = this.hooks;
+    if (hooks.hasOwnProperty(name)) {
+        for (var i=0; i<hooks[name].length; i++) {
+            try {
+                var hkfn = hooks[name][i];
+                hkfn(name, data);
+            } catch (e) {
+                console.log(e);
+           }
         }
     }
 };
@@ -119,7 +128,6 @@ DataAcceptor.prototype.handleParamsGet = function(req, res) {
 
 
 DataAcceptor.prototype.handleStillHere = function(req, res) {
-    console.log('ping!');
     var iaobj = this;
     var b = req.body;
     if (this.pv.tokValid(b)) {
@@ -142,7 +150,7 @@ DataAcceptor.prototype.handleStillHere = function(req, res) {
 
 
 DataAcceptor.prototype.handleDataPost = function(req, res) {
-    console.log('handleDataPost()');
+    // console.log('handleDataPost()');
     var iaobj = this;
     var b = req.body;
     // console.log(JSON.stringify(b,null,2));

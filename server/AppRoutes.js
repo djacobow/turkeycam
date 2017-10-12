@@ -3,7 +3,7 @@ var file_helpers = require('./static_helpers');
 var fs           = require('fs');
 var aws          = require('aws-sdk');
 aws.config.loadFromPath('./aws.json');
-aws.config.logger = process.stdout;
+// aws.config.logger = process.stdout;
 
 function setup() {
     var rekognition = null;
@@ -88,19 +88,23 @@ AppRoutes.prototype.handleTIKListGet = function(req, res) {
 
 
 AppRoutes.prototype.handleListGet = function(req, res) {
-    console.log('GET list of sensors');
+    console.log('get devicelist');
     var devlist = this.da.getdevicelist();
     res.json(devlist);
 };
 
 AppRoutes.prototype.handleStatusGet = function(req, res) {
-    console.log('GET sensor status!');
+    var suppress = {
+        image_jpeg: 1, sensor_data: 1, image_jpeg_buffer: 1,
+    };
     var name = req.params.name;
     var cstate = this.da.getdevicestate(name) || null;
     rv = {};
     if (cstate) {
         Object.keys(cstate).forEach(function(k) {
-            if (k !== 'image_jpeg') rv[k] = cstate[k];
+            if (!suppress.hasOwnProperty(k)) {
+                rv[k] = cstate[k];
+            }
         });
     } else {
         rv.message = 'no such sensor';
@@ -161,12 +165,10 @@ AppRoutes.prototype.onNewPost = function(hooktype, device_name) {
         if (cs) {
             cs.image_jpeg_buffer = Buffer.from(cs.sensor_data.image_jpeg,'base64');
             this.sendToAWS(cs, function(awerr,awdata) {
-                console.log(awerr);
-                console.log(awdata);
                 cs.aws_results = awdata;
-                console.log('back from sendToAWS');
+                // console.log('back from sendToAWS');
                 if (arobj.looksInteresting(cs)) {
-                    arobj.saveImage(cstate);
+                    arobj.saveImage(cs);
                 }
             });
         }
@@ -174,7 +176,7 @@ AppRoutes.prototype.onNewPost = function(hooktype, device_name) {
 };
 
 AppRoutes.prototype.sendToAWS = function(idata, cb) {
-    console.log('sendToAWS()');
+    // console.log('sendToAWS()');
     if (this.fake) return this.fakeSendToAWS(idata,cb);
 
     var parms = {
@@ -185,10 +187,8 @@ AppRoutes.prototype.sendToAWS = function(idata, cb) {
         MinConfidence: 50,
     };
 
-    console.log('parms created');
-
     this.rekognition.detectLabels(parms, function(err, data) {
-        console.log('detectLabels CB()');
+        // console.log('- detectLabels CB()');
         if (err) {
             console.log('AWS error');
             console.log(err);
@@ -196,7 +196,6 @@ AppRoutes.prototype.sendToAWS = function(idata, cb) {
         if (data) {
             console.log(data);
         }
-        console.log('calling Final CB()');
         cb(err,data);
     }); 
 };
