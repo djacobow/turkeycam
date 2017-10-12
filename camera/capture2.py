@@ -23,7 +23,7 @@ from SelfProvision import loadCredentials
 last_idata = None
 trailing_average_sameness = None
 
-url_base = 'https://skunkworks.lbl.gov/turkeycam'
+url_base = 'https://skunkworks.lbl.gov/turkeycam/device'
 
 creds = loadCredentials('./credentials.json',url_base);
 
@@ -56,10 +56,10 @@ cfg = {
     'config_check_period': 7200,
     'ping_period': 60,
     'token': creds['token'],
-    'camera_name': creds['camera_name'],
-    'post_url': url_base + '/newimage',
-    'ping_url': url_base + '/stillhere',
-    'config_url': url_base + '/camparams/' + creds['camera_name'],
+    'sensor_name': creds['sensor_name'],
+    'post_url': url_base + '/push',
+    'ping_url': url_base + '/ping',
+    'config_url': url_base + '/params/' + creds['sensor_name'],
     'daylight': {
         'city': 'San Francisco',
     },
@@ -167,7 +167,7 @@ def sayHi(ip = None):
     now = datetime.datetime.now()
 
     data = {
-        'camera_name': cfg.get('camera_name',''),
+        'sensor_name': cfg.get('sensor_name',''),
         'token': cfg['token'],
         'source': 'turkeyCam',
         'date': now.isoformat(),
@@ -185,14 +185,16 @@ def uploadImage(img, ip = None):
     fstr.seek(0)
 
     data = {
-        'camera_name': cfg.get('camera_name',''),
+        'sensor_name': cfg.get('sensor_name',''),
         'token': cfg['token'],
         'source': 'turkeyCam',
         'date': now.isoformat(),
         'source_ip': ip,
-        'image_jpeg': base64.b64encode(fstr.getvalue()).decode('utf-8'),
+        'sensor_data': {
+            'image_jpeg': base64.b64encode(fstr.getvalue()).decode('utf-8'),
+        },
     }
-    return requests.post(cfg['post_url'], data = data, timeout=60)
+    return requests.post(cfg['post_url'], json = data, timeout=60)
  
 
 

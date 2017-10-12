@@ -22,7 +22,7 @@ def selfProvision(url):
     name = "cam_" + randStr(10)
 
     provtok = None
-    with open('provisioning_token.json','r') as ptfh:
+    with open('./provisioning_token.json','r') as ptfh:
         provtok = json.load(ptfh)
 
     reqdata = {
