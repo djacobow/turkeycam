@@ -5,7 +5,7 @@ import requests
 from urllib.parse import urlencode
 import json
 import datetime
-
+import socket
 
 
 
@@ -40,6 +40,7 @@ class ServerConnection(object):
             'kconn': 1,
         }
         self.ip = self._myIP()
+        self.hostname = self._myHost()
 
         self.creds  = self._loadCredentials()
 
@@ -62,7 +63,9 @@ class ServerConnection(object):
                 'source_type': self.config['device_type'],
                 'date': now.isoformat(),
                 'source_ip': self.ip,
+                'source_host': self.hostname,
             }
+            print(data)
             res = requests.post(self.config['ping_url'], data = data, timeout=20)
             self.stats['ping_attempts'] += 1
             if self.httpOK(res.status_code):
@@ -87,6 +90,7 @@ class ServerConnection(object):
             'source_type': self.config['device_type'],
             'date': now.isoformat(),
             'source_ip': self.ip,
+            'source_host': self.hostname,
         }
         res = requests.post(self.config['post_url'], json = data, timeout=60)
         self.stats['push_attempts'] += 1
@@ -98,6 +102,13 @@ class ServerConnection(object):
         return res
 
 
+    def _myHost(self):
+        host = 'unknown'
+        try:
+            host = socket.gethostname()
+        except:
+            pass
+        return host
     def _myIP(self):
         try:
             return requests.get('https://ipinfo.io').json()['ip']
