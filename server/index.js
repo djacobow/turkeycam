@@ -16,6 +16,7 @@ var setup_debug_hooks = function(da, ar) {
     };
     da.setHook('provision',w);
     da.setHook('push',ar.onNewPost.bind(ar));
+    da.setHook('push',w);
     da.setHook('ping',w);
     da.setHook('getparams',w);
 };
