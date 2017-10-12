@@ -65,7 +65,6 @@ class ServerConnection(object):
                 'source_ip': self.ip,
                 'source_host': self.hostname,
             }
-            print(data)
             res = requests.post(self.config['ping_url'], data = data, timeout=20)
             self.stats['ping_attempts'] += 1
             if self.httpOK(res.status_code):
