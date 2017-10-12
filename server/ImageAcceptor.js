@@ -168,6 +168,7 @@ ImageAcceptor.prototype.handleStillHere = function(req, res) {
        var cstate = this.getcstate(camera_name);
        cstate.ping = {
            'date': b.date,
+           'source_ip': b.source_ip,
        };
        res.status(200);
        res.json({message: 'thanks!' });

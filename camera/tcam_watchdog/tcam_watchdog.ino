@@ -6,6 +6,8 @@
 #include "regfile.h"
 #include "ema.h"
 
+#define USE_SLEEP_MODE 1
+
 const uint8_t MY_I2C_ADDR        = 42;
 const uint8_t REG_STATUS           = 0;
 const uint8_t REG_OUTPUT           = 1;
@@ -32,6 +34,11 @@ const reg_t   STAT_BIT_WAKE_FIRED = 0x0008;
 const reg_t   STAT_BIT_WDOG_SOON  = 0x0010;
 const reg_t   STAT_BIT_PWR_ON     = 0x0020;
 
+#define VERSION_MAJOR 0x01
+#define VERSION_MINOR 0x01
+const reg_t   HW_VERSION          = (VERSION_MAJOR << 8) | VERSION_MINOR;
+
+
 //#define TESTING 1
 #ifdef TESTING
 const reg_t   DEFAULT_ON_TIME     = 60;
@@ -57,6 +64,20 @@ reg_t         *poff_rem;
 reg_t         *prstat;
 reg_t         *poutput;
 
+uint8_t       tick_count = 0;
+uint16_t      loops = 0;
+
+
+void setb(reg_t *r, reg_t b) { *r |= b;  };
+void clrb(reg_t *r, reg_t b) { *r &= ~b; };
+void setclrb(reg_t *r, reg_t b, bool c) {
+    if (c) setb(r,b); else clrb(r,b);
+}
+void decr_by(reg_t *p, uint8_t a) {
+    *p = (a > *p) ? 0 : *p - a;
+};
+
+
 // there is only one request type, and it is very simple:
 // dump the entire register file. We don't even need to
 // examine the "command"
@@ -66,7 +87,6 @@ void requestEvent() {
     isr_running = false;
     handled_request = true;
 }
-
 
 void receiveEvent(int count) {
     isr_running = true;
@@ -88,15 +108,6 @@ void receiveEvent(int count) {
     handled_receive = true;
 }
 
-
-void setb(reg_t *r, reg_t b) { *r |= b;  };
-void clrb(reg_t *r, reg_t b) { *r &= ~b; };
-void setclrb(reg_t *r, reg_t b, bool c) {
-    if (c) setb(r,b); else clrb(r,b);
-}
-void decr_by(reg_t *p, uint8_t a) {
-    *p = (a > *p) ? 0 : *p - a;
-};
 
 void calcleds(reg_t *pout,
               reg_t *pstat,
@@ -121,7 +132,7 @@ void setoutputs(reg_t *pout) {
 }
 
 
-void timer2_setup() {
+void setup_timer2() {
     TCCR2A = 0;
     TCCR2B = 0;
     TCNT2  = 0;
@@ -132,6 +143,7 @@ void timer2_setup() {
     TIMSK2 |= (1 << OCIE2A);
 }
 
+#ifdef USE_SLEEP_MODE
 void setup_sleep() {
     ADCSRA = 0;
     power_adc_disable();    // don't need ADC
@@ -155,57 +167,16 @@ void enter_sleep() {
     sleep_cpu();
     sleep_disable();
 }
-
-void setup() {
-    noInterrupts();
-
-    Wire.begin(MY_I2C_ADDR);
-    Wire.onReceive(receiveEvent);
-    Wire.onRequest(requestEvent);
-
-    pinMode(PIN_PWR,  OUTPUT);
-    pinMode(PIN_LED0, OUTPUT);
-    pinMode(PIN_LED1, OUTPUT);
-    pinMode(PIN_LED2, OUTPUT);
-
-    pon_rem     = rf.getptr(REG_ON_REMAINING);
-    poff_rem    = rf.getptr(REG_OFF_REMAINING);
-    prstat      = rf.getptr(REG_STATUS);
-    poutput     = rf.getptr(REG_OUTPUT);
-    rf_baseptr  = rf.getptr(0);
-
-    // initialize the register file, start
-    // in shutdon mode
-    rf.clear();
-    rf.set_debug(&Serial);
-    *pon_rem    =  DEFAULT_ON_TIME;
-    *poff_rem   = DEFAULT_OFF_TIME;
-    *poutput    = OUT_BIT_PWR_ON;
-    *prstat     = STAT_BIT_WDOG_EN |
-                  STAT_BIT_WAKE_EN |
-                  STAT_BIT_PWR_ON;
-    rf.set(REG_OFF_REM_RESETVAL, DEFAULT_OFF_TIME);
-    rf.set(REG_ON_REM_RESETVAL,  DEFAULT_ON_TIME);
-    last_opattern = *poutput;
-
-    wdt_enable(WDTO_8S);
-    timer2_setup();
-
-    setup_sleep();
-
-    interrupts();
-
-    Serial.begin(57600);
-    Serial.println("We're ready to roll!");
-}
+#else
+void setup_sleep() { };
+void enter_sleep() { };
+#endif
 
 
-uint8_t tick_count = 0;
 
 ISR(TIMER2_COMPA_vect) {
     tick_count += 1;
 };
-
 
 #ifdef CALIBRATING_TICKER
 uint32_t last_millis = 0;
@@ -244,12 +215,7 @@ void timer_routine() {
 
     if (seconds_elapsed && !isr_running) {
 
-        if (true) {
-            Serial.print("On rem:  ");      Serial.print(*pon_rem);
-            Serial.print(", Off rem: ");    Serial.print(*poff_rem);
-            Serial.print(", rstat: 0x");    Serial.print(*prstat,HEX);
-            Serial.print(", poutput:  0x"); Serial.println(*poutput,HEX);
-        }
+        if (true) rf.dump();
 
         calcleds(opattern, prstat, pon_rem, poff_rem);
 
@@ -286,11 +252,56 @@ void timer_routine() {
 };
 
 
-uint16_t loops = 0;
+
+void setup() {
+    noInterrupts();
+
+    Wire.begin(MY_I2C_ADDR);
+    Wire.onReceive(receiveEvent);
+    Wire.onRequest(requestEvent);
+
+    pinMode(PIN_PWR,  OUTPUT);
+    pinMode(PIN_LED0, OUTPUT);
+    pinMode(PIN_LED1, OUTPUT);
+    pinMode(PIN_LED2, OUTPUT);
+
+    pon_rem     = rf.getptr(REG_ON_REMAINING);
+    poff_rem    = rf.getptr(REG_OFF_REMAINING);
+    prstat      = rf.getptr(REG_STATUS);
+    poutput     = rf.getptr(REG_OUTPUT);
+    rf_baseptr  = rf.getptr(0);
+
+    // initialize the register file, start
+    // in shutdon mode
+    rf.clear();
+    rf.set(rf_size - 1, HW_VERSION);
+    rf.set_debug(&Serial);
+    *pon_rem    = DEFAULT_ON_TIME;
+    *poff_rem   = DEFAULT_OFF_TIME;
+    *poutput    = OUT_BIT_PWR_ON;
+    *prstat     = STAT_BIT_WDOG_EN |
+                  STAT_BIT_WAKE_EN |
+                  STAT_BIT_PWR_ON;
+    rf.set(REG_OFF_REM_RESETVAL, DEFAULT_OFF_TIME);
+    rf.set(REG_ON_REM_RESETVAL,  DEFAULT_ON_TIME);
+    last_opattern = *poutput;
+    wdt_enable(WDTO_8S);
+    setup_timer2();
+    setup_sleep();
+
+    interrupts();
+
+    Serial.begin(57600);
+    Serial.println("We're all ready.");
+}
 
 void loop() {
     uint8_t ticks_per_second = 31;
-    if (loops == 16000) ticks_per_second = 32;
+    if (loops == 16000) {
+        // leap-tick to make time a bit more accurate
+        ticks_per_second = 32; 
+        loops = 0;
+    }
     if (tick_count >= ticks_per_second) {
         tick_count = 0;
         timer_routine();
