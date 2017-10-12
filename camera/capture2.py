@@ -1,33 +1,25 @@
 #!/usr/bin/env python3
 
-import sys
 import time
-import io
 import datetime
-import string
-import random
 import pytz
-import base64
-import json
-import picamera
-from skimage.measure import compare_ssim as ssim
-import numpy as np
-from PIL import Image
-import requests
-from urllib.parse import urlencode
-
-
+import ServerConnection
 from Daylight import Daylight
-from SelfProvision import loadCredentials
+from Camera import Camera
 
-last_idata = None
-trailing_average_sameness = None
+def getSerial():
+    cpuserial = "0000000000000000"
+    try:
+        with open('/proc/cpuinfo','r') as fh:
+            for line in fh:
+                if line[0:6]=='Serial':
+                    cpuserial = line[10:26]
+    except:
+        cpuserial = "ERROR000000000"
+    return cpuserial
 
-url_base = 'https://skunkworks.lbl.gov/turkeycam/device'
 
-creds = loadCredentials('./credentials.json',url_base);
-
-cfg = {
+base_config = {
     'wdog_use_i2c': False,
     'wdog2': {
         'shutdown_cmd': '/usr/bin/sudo /sbin/shutdown -h now',
@@ -55,16 +47,18 @@ cfg = {
     },
     'config_check_period': 7200,
     'ping_period': 60,
-    'token': creds['token'],
-    'sensor_name': creds['sensor_name'],
-    'post_url': url_base + '/push',
-    'ping_url': url_base + '/ping',
-    'config_url': url_base + '/params/' + creds['sensor_name'],
     'daylight': {
         'city': 'San Francisco',
     },
     'picture_period': 10,
     'tick_length': 0.5,
+    'cam_params': {
+    },
+    # if we get a series of bad network responses, either the server
+    # or the network is down. We will just shutdown and try again in 
+    # a few minutes
+    'max_consec_net_errs': 10,
+    'net_reboot_off_period': 180,
     'cam_params': {
         'resolution': (2560, 2048),
         #'resolution': (3280, 2464),  # max native res for pi camera2
@@ -72,185 +66,53 @@ cfg = {
         #'iso': 100,
         'vflip': False,
         'image_effect': 'denoise',
-    },
-    # if we get a series of bad network responses, either the server
-    # or the network is down. We will just shutdown and try again in 
-    # a few minutes
-    'max_consec_net_errs': 10,
-    'net_reboot_off_period': 180,
+    }
 }
 
-def myIP():
-    try:
-        return requests.get('https://ipinfo.io').json()['ip']
-    except:
-        return 'dunno'
+def pre_run():
 
+    cconn = Camera()
 
-def captureToBytesRGB():
-    stream = None
-    image = None
-
-    with picamera.PiCamera() as camera:
-        for param in cfg['cam_params']:
-            setattr(camera,param,cfg['cam_params'][param])
-        stream = io.BytesIO()
-        time.sleep(1) # this is for the camera to adjust its exposure
-        print('Capture image')
-        camera.capture(stream, format='rgb')
-        width = cfg['cam_params']['resolution'][0]
-        height = cfg['cam_params']['resolution'][1]
-        stream.seek(0)
-        image = np.frombuffer(stream.getvalue(), dtype=np.uint8).reshape(height, width, 3)
-        stream.seek(0)
-    return {'npimage': image, 'stream': stream}
-        
-
-
-def compareImages(i0,i1):
-    # this basically resizes a 2d array, to make a pic smaller
-    def rebin(a, shape):
-        sh = shape[0],a.shape[0]//shape[0],shape[1],a.shape[1]//shape[1]
-        return a.reshape(sh).mean(-1).mean(1)
-
-    if not i0 or not i1:
-        return None
-
-    # convert to grayscale
-    gs0 = np.mean(i0['npimage'], axis=2)
-    gs1 = np.mean(i1['npimage'], axis=2)
-    # shrink to make calc faster
-    newshape = [ int(x/4) for x in gs0.shape ]
-
-    sm0 = rebin(gs0,newshape)
-    sm1 = rebin(gs1,newshape)
-
-    s = ssim(sm0, sm1)
-    return s
-
-def takePhotoAndMaybeUpload(ip):
-    global last_idata
-    global trailing_average_sameness
-
-    try:
-        idata = captureToBytesRGB()
-        sameness = compareImages(idata, last_idata)
-
-        do_upload = False
-
-        if sameness is not None:
-            if trailing_average_sameness is None:
-                trailing_average_sameness = sameness
-
-            print('Sameness: {0}, Trailing: {1}'.format(str(sameness),str(trailing_average_sameness)))
-            
-            trailing_average_sameness += -0.1 * trailing_average_sameness + 0.1 * sameness
-            res = None
-            if sameness < 0.90 * trailing_average_sameness:
-                do_upload = True
-        else:
-            do_upload = True
-
-        if do_upload:
-            res = uploadImage(idata,ip)
-            print(res)
-
-        last_idata = idata
-
-    except Exception as e:
-        print('well, that didn\'t work')
-        print(e)
-
-
-def sayHi(ip = None):
-    print('sayHi()')
-    now = datetime.datetime.now()
-
-    data = {
-        'sensor_name': cfg.get('sensor_name',''),
-        'token': cfg['token'],
-        'source': 'turkeyCam',
-        'date': now.isoformat(),
-        'source_ip': ip,
+    server_config = {
+        'provisioning_token_path': './provisioning_token.json',
+        'url_base': 'https://skunkworks.lbl.gov/turkeycam',
+        'credentials_path': './credentials.json',
+        'params_path': './local_config.json',
+        'device_name': None,
+        'device_type': 'picamera',
+        'device_serial': cconn.getSerial(),
     }
-    return requests.post(cfg['ping_url'], data = data, timeout=20)
+    sconn = ServerConnection.ServerConnection(server_config)
 
-def uploadImage(img, ip = None):
-    print('uploadImage()')
-    now = datetime.datetime.now()
-
-    pilimg = Image.fromarray(img['npimage'],'RGB')
-    fstr   = io.BytesIO()
-    pilimg.save(fstr,format='jpeg')
-    fstr.seek(0)
-
-    data = {
-        'sensor_name': cfg.get('sensor_name',''),
-        'token': cfg['token'],
-        'source': 'turkeyCam',
-        'date': now.isoformat(),
-        'source_ip': ip,
-        'sensor_data': {
-            'image_jpeg': base64.b64encode(fstr.getvalue()).decode('utf-8'),
-        },
-    }
-    return requests.post(cfg['post_url'], json = data, timeout=60)
- 
-
-
-def configLocalOverride(cfg,fn):
-    try:
-        with open(fn,'r') as fh:
-            data = json.loads(fh.read())
-            for key in data:
-                print('Local override cfg[{0}] = {1}'.format(key,json.dumps(data[key])))
-                cfg[key] = data[key]
-    except Exception as e:
-        print('Got exception reading local overrides');
-        print(e)
-
-
-def configRemoteOverride(cfg):
-    try:
-        url = cfg['config_url'] + '?' + urlencode({'token':cfg['token']})
-        res = requests.get(url, timeout=30)
-        if res.status_code == 200:
-            data = res.json()
-            for key in data:
-                print('Remote override cfg[{0}] = {1}'.format(key,json.dumps(data[key])))
-                cfg[key] = data[key]
-        else:
-            print('Got error code fetching params from server.')
-    except Exception as e:
-        print('Got exception fetching params.')
-        print(e)
-
-
-
-
-
-def mymain():
-    configLocalOverride(cfg, 'local_config.json')
+    cfg = { k:base_config[k] for k in base_config }
+    cfg['sconn'] = sconn
+    cfg['cconn'] = cconn
+    sconn.getParams(cfg)
+    cconn.setParams(cfg['cam_params'])
 
     if cfg.get('wdog_use_i2c',False):
         from Wdog2 import Wdog
-        wdog = Wdog(cfg['wdog2'])
+        cfg['wdog'] = Wdog(cfg['wdog2'])
     else:
         from Wdog import Wdog
-        wdog = Wdog(cfg['wdog'])
+        cfg['wdog'] = Wdog(cfg['wdog'])
 
-    wdog.setup()
-    wdog.wait_for_time_sync()
+    cfg['wdog'].setup()
 
-    configRemoteOverride(cfg)
+    return cfg
+
+
+
+def mymain(cfg):
+
+    cfg['wdog'].wait_for_time_sync()
 
     day = Daylight(cfg['daylight'])
 
-    last_shot      = pytz.timezone('utc').localize(datetime.datetime.now())
-    last_cfg_check = pytz.timezone('utc').localize(datetime.datetime.now())
-    last_ping      = pytz.timezone('utc').localize(datetime.datetime.now())
+    last_shot      = pytz.timezone('utc').localize(datetime.datetime.fromtimestamp(0))
+    last_cfg_check = pytz.timezone('utc').localize(datetime.datetime.fromtimestamp(0))
+    last_ping      = pytz.timezone('utc').localize(datetime.datetime.fromtimestamp(0))
 
-    ip = myIP()
     count = 0
     running = True;
     batt_nok_count = 0
@@ -259,27 +121,27 @@ def mymain():
     while running:
         now = pytz.timezone('utc').localize(datetime.datetime.now())
 
-        
         time_to_light = day.timeToSunUp()
         if time_to_light != 0:
-        #if True:
             running = False
-            wdog.shutdown(time_to_light)
+            cfg['wdog'].shutdown(time_to_light)
 
-        if not wdog.battIsOK():
-            wdog.shutown()
+        if not cfg['wdog'].battIsOK():
+            cfg['wdog'].shutown()
 
         if consec_net_errs > cfg['max_consec_net_errs']:
-            wdog.shutdown(cfg['net_reboot_off_period']);
+            cfg['wdog'].shutdown(cfg['net_reboot_off_period']);
 
         did_upload = False
         if now - last_shot > datetime.timedelta(seconds=cfg['picture_period']):
             last_shot = now
-            did_upload = takePhotoAndMaybeUpload(ip)
+            phdata = cfg['cconn'].takeAndComparePhoto()
+            if phdata:
+                cfg['sconn'].push(phdata)
 
         if not did_upload and now - last_ping > datetime.timedelta(seconds=cfg['ping_period']):
             last_ping = now
-            res = sayHi(ip)
+            res = cfg['sconn'].ping()
             if res.status_code == 200:
                 consec_net_errs = 0
             else:
@@ -287,19 +149,23 @@ def mymain():
 
         if now - last_cfg_check > datetime.timedelta(seconds=cfg['config_check_period']):
             last_cfg_check = now
-            configOverride(cfg)
+            cfg['sconn'].getParams(cfg)
 
-        wdog.beatHeart()
+        cfg['wdog'].beatHeart()
 
         time.sleep(cfg['tick_length']);
         count += 1
   
 
 if __name__ == '__main__':
+    cfg = None
     try:
-        mymain()
+        cfg = pre_run()
+        if cfg:
+            mymain(cfg)
     except Exception as e:
         print('Whoops!')
         print(e)
     
-        wdog.unsetup()
+        if cfg and cfg.get('wdog',None):
+            cfg['wdog'].unsetup()
