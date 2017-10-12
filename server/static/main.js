@@ -92,6 +92,7 @@ var makeTable = function(name,d) {
         ddiv.appendChild(t);
     }
     var el, ds, latest;
+    latest = new Date(0);
     var ul = document.createElement('ul');
     ddiv.appendChild(ul);
     if (d && d.date) {
