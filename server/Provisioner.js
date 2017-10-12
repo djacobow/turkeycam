@@ -39,16 +39,16 @@ Provisioner.prototype.loadProvisioned = function() {
 
 Provisioner.prototype.tokValid = function(b) {
     if (b.hasOwnProperty('token') && 
-        b.hasOwnProperty('camera_name') &&
-        this.provisioned.hasOwnProperty(b.camera_name) &&
-        this.provisioned[b.camera_name].hasOwnProperty('tok_hash') &&
-        this.provisioned[b.camera_name].hasOwnProperty('serial_number') &&
-        this.provisioned[b.camera_name].hasOwnProperty('salt')) {
+        b.hasOwnProperty('sensor_name') &&
+        this.provisioned.hasOwnProperty(b.sensor_name) &&
+        this.provisioned[b.sensor_name].hasOwnProperty('tok_hash') &&
+        this.provisioned[b.sensor_name].hasOwnProperty('serial_number') &&
+        this.provisioned[b.sensor_name].hasOwnProperty('salt')) {
         var hash = this.hash(b.token,
-                            [this.provisioned[b.camera_name].serial_number,
-                             this.provisioned[b.camera_name].salt,
+                            [this.provisioned[b.sensor_name].serial_number,
+                             this.provisioned[b.sensor_name].salt,
                             ]);
-        return hash === this.provisioned[b.camera_name].tok_hash;
+        return hash === this.provisioned[b.sensor_name].tok_hash;
     }
     return false;
 };
@@ -83,9 +83,9 @@ function thingInThings(things, kname, kvalue) {
     for (var i=0; i<keys.length; i++) {
         var key = keys[i];
         var kv = things[key][kname] || null;
-        if (kv && (kv == kvalue)) return true;
+        if (kv && (kv == kvalue)) return key;
     }
-    return false;
+    return null;
 }
 
 Provisioner.prototype.create_new = function(name, serial, nows) {
@@ -95,7 +95,7 @@ Provisioner.prototype.create_new = function(name, serial, nows) {
     var rv = {
         new_entry: {
             serial_number: serial,
-            camera_name: name,
+            sensor_name: name,
             provisioning_attempts: 1,
             prov_date: nows,
             salt: new_salt,
@@ -103,7 +103,7 @@ Provisioner.prototype.create_new = function(name, serial, nows) {
         },
         return_data: {
             serial_number: serial,
-            camera_name: name,
+            sensor_name: name,
             provisioning_attempts: 1,
             prov_date: nows,
             token: new_token,
@@ -119,7 +119,7 @@ Provisioner.prototype.provision = function(req) {
 
     var nows = (new Date()).toISOString();
     var serial_in_use = thingInThings(this.provisioned, 'serial_number', serial);
-
+    var d = null;
     if (this.provTokValid(provtok)) {
         var existing = this.provisioned[name] || null;
         if (existing) {
@@ -133,12 +133,24 @@ Provisioner.prototype.provision = function(req) {
                return null;
            }
         } else if (serial_in_use) {
-            return null;
+            // console.log('serial_in_use: ' + serial_in_use);
+            var provisioning_attempts = this.provisioned[serial_in_use].provisioning_attempts;
+            if (provisioning_attempts < MAX_PROV_ATTEMPTS) {
+                d = this.create_new(serial_in_use, serial, nows);
+                provisioning_attempts += 1;
+                d.new_entry.provisioning_attempts = provisioning_attempts;
+                d.return_data.provisioning_attempts = provisioning_attempts;
+                this.provisioned[serial_in_use] = d.new_entry;
+                this.saveProvisioned();
+                return d.return_data;
+            } else {
+                return null;
+            }
         } else {
-            var d = this.create_new(name, serial, nows);
+            d = this.create_new(name, serial, nows);
             this.provisioned[name] = d.new_entry;
             this.saveProvisioned();
-            return r_data.return_data;
+            return d.return_data;
         }
     }
     return null;

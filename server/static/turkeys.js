@@ -24,7 +24,7 @@ function showJS(jserr, jsdata, jsurl) {
 var populateTurkeys = function() {
     var turktable = document.getElementById('turktable');
     removeChildren(turktable);
-    getJSON('/turkeycam/turkeys/list', function(err, data) {
+    getJSON('/turkeycam/app/turkeys/list', function(err, data) {
         if (err) {
             turksdiv.innerText += 'Error getting turkey list.';
             return;
@@ -35,7 +35,7 @@ var populateTurkeys = function() {
         var dates = Object.keys(data);
         for (var i=0; i<dates.length; i++) {
             var date = dates[i];
-            var isrc = '/turkeycam/turkeys/' + data[date].jpg;
+            var isrc = '/turkeycam/app/turkeys/' + data[date].jpg;
             if (isrc) {
                 var img  = document.createElement('img');
                 img.style.display = 'block';
@@ -53,7 +53,7 @@ var populateTurkeys = function() {
                 imgtd.style.width = '50%';
                 row.appendChild(imgtd);
                 if ('json' in data[date]) {
-                    var jsrc = '/turkeycam/turkeys/' + data[date].json;
+                    var jsrc = '/turkeycam/app/turkeys/' + data[date].json;
                     var datatd = document.createElement('td');
                     datatd.style.width = '50%';
                     var dataspan = document.createElement('span');

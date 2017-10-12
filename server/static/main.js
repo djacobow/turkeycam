@@ -11,7 +11,7 @@ var reloadImage = function(name,crdate) {
     console.log('reloadImage(' + name + ')');
     camelems[name].img.style.display = 'inline';
     var dt = new Date(crdate).getTime();
-    var img_url = '/turkeycam/image/' + name + '?date=' + encodeURIComponent(dt);
+    var img_url = '/turkeycam/app/image/' + name + '?date=' + encodeURIComponent(dt);
     camelems[name].img.src = img_url;
     camelems[name].img_a.href = img_url;
 };
@@ -132,7 +132,7 @@ var makeTable = function(name,d) {
 };
 
 var getCamList = function(cb) {
-    getJSON('/turkeycam/cameranames', function(err, data) {
+    getJSON('/turkeycam/app/devicenames', function(err, data) {
         if (err) {
             console.log('Error getting camera list: ' + err);
             return cb(err);
@@ -143,7 +143,7 @@ var getCamList = function(cb) {
 };
 
 var checkData = function(name, cb) {
-    getJSON('/turkeycam/status/' + name, function(err, new_data) {
+    getJSON('/turkeycam/app/status/' + name, function(err, new_data) {
         var old_data = current_results[name];
     
         if (err) {
