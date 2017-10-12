@@ -112,8 +112,14 @@ var makeTable = function(name,d) {
         ip = d.source_ip;
         if (!ip) ip = d.ping.source_ip;
         el = document.createElement('li');
-        if (ds > latest) latest = dt;
         el.innerText = 'Camera IP: ' + ip;
+        ul.appendChild(el);
+    }
+    if (d && (d.source_host || d.ping.source_host)) {
+        host  = d.source_host;
+        if (!host) host = d.ping.source_host;
+        el = document.createElement('li');
+        el.innerText = 'Camera Host: ' + host;
         ul.appendChild(el);
     }
     if (latest) {

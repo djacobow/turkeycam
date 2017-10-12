@@ -114,7 +114,7 @@ DataAcceptor.prototype.handleParamsGet = function(req, res) {
         return;
     }
     res.status(403);
-    res.json({ message: 'nyet.' }); 
+    res.json({ message: 'nyet.' });
 };
 
 
@@ -128,6 +128,8 @@ DataAcceptor.prototype.handleStillHere = function(req, res) {
        cstate.ping = {
            'date': b.date,
            'source_ip': b.source_ip,
+           'source_host': b.source_host,
+           'source_type': b.source_type,
        };
        res.status(200);
        res.json({message: 'thanks!' });
@@ -154,7 +156,9 @@ DataAcceptor.prototype.handleDataPost = function(req, res) {
            return;
        }
        cstate.busy = true;
-       cstate.source_ip = b.source_ip; 
+       cstate.source_ip = b.source_ip;
+       cstate.source_host = b.source_host;
+       cstate.source_type = b.source_type;
        cstate.date = b.date;
        cstate.sensor_data = b.sensor_data;
        cstate.valid = true;
