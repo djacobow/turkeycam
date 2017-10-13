@@ -3,7 +3,7 @@ var simpleSplat = function(res, type, fn) {
     res.sendFile(__dirname + fn);
 };
 
-real_files = { 'async.js':1, 'main.js': 1, 'gobble.wav': 1, 'turkeys.js':1, 'helpers.js':1, 'main.css':1};
+real_files = { 'async.js':1, 'main.js': 1, 'gobble.wav': 1, 'turkeys.js':1, 'helpers.js':1, 'main.css':1, 'whatisthis.html':1, 'camera.jpg':1};
 
 var handleStatic = function(req, res) {
    var name = req.params.name.replace('/','');
@@ -15,6 +15,8 @@ var handleStatic = function(req, res) {
            type = 'audio/wave';
        } else if (name.match(/\.css$/)) {
            type = 'text/css';
+       } else if (name.match(/\.jpg$/)) {
+           type = 'image/jpeg';
        }
        simpleSplat(res,type, '/static/' + name);
    } else {
