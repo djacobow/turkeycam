@@ -22,6 +22,7 @@ var AppRoutes = function(app_config, dataacceptor) {
     if (!this.config.fake) {
         this.rekognition = new aws.Rekognition();
     }
+    this.starttime = (new Date()).toISOString();
 };
 
 AppRoutes.prototype.setupRoutes = function(router) {
@@ -31,6 +32,13 @@ AppRoutes.prototype.setupRoutes = function(router) {
     router.get('/turkeys/:name', this.handleTIKImageGet.bind(this));
     router.get('/turkeys',       this.handleTurkeysGet.bind(this));
     router.get('/image/:name',   this.handleImageGet.bind(this));
+    router.get('/uptime',        this.handleUptimeGet.bind(this));
+};
+
+AppRoutes.prototype.handleUptimeGet = function(req, res) {
+    res.status(200);
+    var now = (new Date()).toISOString();
+    res.json({start_time: this.starttime, now: now});
 };
 
 AppRoutes.prototype.handleImageGet = function(req, res) {
