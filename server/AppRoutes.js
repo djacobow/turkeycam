@@ -225,6 +225,7 @@ AppRoutes.prototype.saveImage = function(cs) {
         var keys_to_skip = {
             'image_jpeg': 1,
             'image_jpeg_buffer': 1,
+            'sensor_data': 1,
         };
         for (var i=0;i<ks.length;i++) {
             var k =ks[i];
