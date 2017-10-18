@@ -65,11 +65,11 @@ DataAcceptor.prototype.handleProvision = function(req, res) {
     };
     var rv = this.pv.provision(arg);
     if (rv) {
-        this.getdevicestate(rv.sensor_name);
+        this.getdevicestate(rv.node_name);
         res.status('200');
         var sv = copyWithoutKey(rv, 'serial_number');
         res.json(sv);
-        this.fireHook('provision',rv.sensor_name);
+        this.fireHook('provision',rv.node_name);
         return;
     }
     res.status('403');
@@ -90,7 +90,7 @@ DataAcceptor.prototype.getdevicestate = function(name, startup = false) {
     var cs = this.cstates[name] || null;
     if (startup && !cs) {
         cs = {
-            sensor_name: name,
+            node_name: name,
             busy: false,
             valid: false,
         };
@@ -104,19 +104,19 @@ DataAcceptor.prototype.setupDefaults = function() {
     var cstates = {};
     this.cstates = cstates;
     var othis = this;
-    Object.keys(this.pv.getProvisioned()).forEach(function(sensor_name) {
-        othis.getdevicestate(sensor_name, true);
+    Object.keys(this.pv.getProvisioned()).forEach(function(node_name) {
+        othis.getdevicestate(node_name, true);
     });
 };
 
 
 DataAcceptor.prototype.handleParamsGet = function(req, res) {
-    var b = { sensor_name: req.params.name, token: req.query.token };
+    var b = { node_name: req.params.name, token: req.query.token };
     if (this.pv.tokValid(b)) {
         res.status(200);
-        if (this.cparams.hasOwnProperty(b.sensor_name)) {
-            res.json(this.cparams[b.sensor_name]);
-            this.fireHook('getparams',b.sensor_name);
+        if (this.cparams.hasOwnProperty(b.node_name)) {
+            res.json(this.cparams[b.node_name]);
+            this.fireHook('getparams',b.node_name);
         } else {
             res.json({});
         }
@@ -131,8 +131,8 @@ DataAcceptor.prototype.handleStillHere = function(req, res) {
     var iaobj = this;
     var b = req.body;
     if (this.pv.tokValid(b)) {
-       var sensor_name= b.sensor_name;
-       var cstate = this.getdevicestate(sensor_name);
+       var node_name= b.node_name;
+       var cstate = this.getdevicestate(node_name);
        cstate.ping = {
            'date': b.date,
            'source_ip': b.source_ip,
@@ -141,7 +141,7 @@ DataAcceptor.prototype.handleStillHere = function(req, res) {
        };
        res.status(200);
        res.json({message: 'thanks!' });
-       this.fireHook('ping',sensor_name);
+       this.fireHook('ping',node_name);
        return;
     }
     res.status(403);
@@ -155,10 +155,10 @@ DataAcceptor.prototype.handleDataPost = function(req, res) {
     var b = req.body;
     // console.log(JSON.stringify(b,null,2));
     if (this.pv.tokValid(b)) {
-       var sensor_name= b.sensor_name;
-       var cstate = this.getdevicestate(sensor_name);
+       var node_name= b.node_name;
+       var cstate = this.getdevicestate(node_name);
        if (!cstate) {
-           console.log('unknown device: ' + sensor_name);
+           console.log('unknown device: ' + node_name);
            res.status('403');
            res.json({message:'unknown device'});
            return;
@@ -174,7 +174,7 @@ DataAcceptor.prototype.handleDataPost = function(req, res) {
        cstate.busy = false;
        res.status(200);
        res.json({message: 'thanks!', upload_number: cstate.upload_number});
-       this.fireHook('push',sensor_name);
+       this.fireHook('push',node_name);
     } else {
        res.status(403);
        res.json({ message: 'nope.' });

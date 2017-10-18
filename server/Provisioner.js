@@ -39,16 +39,16 @@ Provisioner.prototype.loadProvisioned = function() {
 
 Provisioner.prototype.tokValid = function(b) {
     if (b.hasOwnProperty('token') && 
-        b.hasOwnProperty('sensor_name') &&
-        this.provisioned.hasOwnProperty(b.sensor_name) &&
-        this.provisioned[b.sensor_name].hasOwnProperty('tok_hash') &&
-        this.provisioned[b.sensor_name].hasOwnProperty('serial_number') &&
-        this.provisioned[b.sensor_name].hasOwnProperty('salt')) {
+        b.hasOwnProperty('node_name') &&
+        this.provisioned.hasOwnProperty(b.node_name) &&
+        this.provisioned[b.node_name].hasOwnProperty('tok_hash') &&
+        this.provisioned[b.node_name].hasOwnProperty('serial_number') &&
+        this.provisioned[b.node_name].hasOwnProperty('salt')) {
         var hash = this.hash(b.token,
-                            [this.provisioned[b.sensor_name].serial_number,
-                             this.provisioned[b.sensor_name].salt,
+                            [this.provisioned[b.node_name].serial_number,
+                             this.provisioned[b.node_name].salt,
                             ]);
-        return hash === this.provisioned[b.sensor_name].tok_hash;
+        return hash === this.provisioned[b.node_name].tok_hash;
     }
     return false;
 };
@@ -95,7 +95,7 @@ Provisioner.prototype.create_new = function(name, serial, nows) {
     var rv = {
         new_entry: {
             serial_number: serial,
-            sensor_name: name,
+            node_name: name,
             provisioning_attempts: 1,
             prov_date: nows,
             salt: new_salt,
@@ -103,7 +103,7 @@ Provisioner.prototype.create_new = function(name, serial, nows) {
         },
         return_data: {
             serial_number: serial,
-            sensor_name: name,
+            node_name: name,
             provisioning_attempts: 1,
             prov_date: nows,
             token: new_token,

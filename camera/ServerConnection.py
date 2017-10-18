@@ -45,7 +45,7 @@ class ServerConnection(object):
         self.creds  = self._loadCredentials()
 
         if not self.config.get('params_url',None):
-                self.config['params_url'] = self.config['url_base'] + '/device/params/' + self.creds['sensor_name']
+                self.config['params_url'] = self.config['url_base'] + '/device/params/' + self.creds['node_name']
 
     def getStats(self):
         return { k:self.stats[k] for k in self.stats }
@@ -58,7 +58,7 @@ class ServerConnection(object):
             print('ping()')
             now = datetime.datetime.now()
             data = {
-                'sensor_name': self.creds.get('sensor_name',''),
+                'node_name': self.creds.get('node_name',''),
                 'token': self.creds['token'],
                 'source_type': self.config['device_type'],
                 'date': now.isoformat(),
@@ -84,7 +84,7 @@ class ServerConnection(object):
 
         data = {
             'sensor_data': sdata,
-            'sensor_name': self.creds.get('sensor_name',''),
+            'node_name': self.creds.get('node_name',''),
             'token': self.creds['token'],
             'source_type': self.config['device_type'],
             'date': now.isoformat(),
