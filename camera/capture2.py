@@ -1,11 +1,9 @@
 #!/usr/bin/env python3
 
-import time
-import datetime
-import pytz
-import ServerConnection
-from Daylight import Daylight
-from Camera import Camera
+from ServerConnection import ServerConnection
+from Daylight         import Daylight
+from Camera           import Camera
+from TimerLoop        import TimerLoop
 
 def getSerial():
     cpuserial = "0000000000000000"
@@ -82,7 +80,7 @@ def pre_run():
         'device_type': 'picamera',
         'device_serial': cconn.getSerial(),
     }
-    sconn = ServerConnection.ServerConnection(server_config)
+    sconn = ServerConnection(server_config)
 
     cfg = { k:base_config[k] for k in base_config }
     cfg['sconn'] = sconn
@@ -102,60 +100,55 @@ def pre_run():
     return cfg
 
 
+class CapHandlers(object):
+    def __init__(self, cfg):
+        self.cfg = cfg
+        self.consec_net_errs = 0
+        self.day = Daylight(cfg['daylight'])
+
+    def houseKeeping(self, name, now):
+        time_to_light = self.day.timeToSunUp()
+        if time_to_light != 0:
+            self.cfg['wdog'].shutdown(time_to_light)
+            return True
+        if not cfg['wdog'].battIsOK():
+            self.cfg['wdog'].shutdown()
+
+        if self.consec_net_errs > self.cfg['max_consec_net_errs']:
+            self.cfg['wdog'].shutdown(self.cfg['net_reboot_off_period']);
+
+        self.cfg['wdog'].beatHeart()
+
+    def takePhoto(self, name, now):
+        phdata = cfg['cconn'].takeAndComparePhoto()
+        if phdata:
+            cfg['sconn'].push(phdata)
+
+    def doPing(self, name, now):
+        res = self.cfg['sconn'].ping()
+        if res.status_code == 200:
+            self.consec_net_errs = 0
+        else:
+            self.consec_net_errs += 1
+
+    def checkConfg(self, name, now):
+        self.cfg['sconn'].getParams(self.cfg)
+
+
 
 def mymain(cfg):
 
     cfg['wdog'].wait_for_time_sync()
 
-    day = Daylight(cfg['daylight'])
+    el = TimerLoop()
+    ch = CapHandlers(cfg)
 
-    last_shot      = pytz.timezone('utc').localize(datetime.datetime.fromtimestamp(0))
-    last_cfg_check = pytz.timezone('utc').localize(datetime.datetime.fromtimestamp(0))
-    last_ping      = pytz.timezone('utc').localize(datetime.datetime.fromtimestamp(0))
+    el.addHandler(ch.houseKeeping, 30)
+    el.addHandler(ch.takePhoto,    cfg['picture_period'])
+    el.addHandler(ch.doPing,       cfg['ping_period'])
+    el.addHandler(ch.checkConfg,   cfg['config_check_period'])
 
-    count = 0
-    running = True;
-    batt_nok_count = 0
-    consec_net_errs = 0
-
-    while running:
-        now = pytz.timezone('utc').localize(datetime.datetime.now())
-
-        time_to_light = day.timeToSunUp()
-        if time_to_light != 0:
-            running = False
-            cfg['wdog'].shutdown(time_to_light)
-
-        if not cfg['wdog'].battIsOK():
-            cfg['wdog'].shutown()
-
-        if consec_net_errs > cfg['max_consec_net_errs']:
-            cfg['wdog'].shutdown(cfg['net_reboot_off_period']);
-
-        did_upload = False
-        if now - last_shot > datetime.timedelta(seconds=cfg['picture_period']):
-            last_shot = now
-            phdata = cfg['cconn'].takeAndComparePhoto()
-            if phdata:
-                cfg['sconn'].push(phdata)
-
-        if not did_upload and now - last_ping > datetime.timedelta(seconds=cfg['ping_period']):
-            last_ping = now
-            res = cfg['sconn'].ping()
-            if res.status_code == 200:
-                consec_net_errs = 0
-            else:
-                consec_net_errs += 1
-
-        if now - last_cfg_check > datetime.timedelta(seconds=cfg['config_check_period']):
-            last_cfg_check = now
-            cfg['sconn'].getParams(cfg)
-
-        cfg['wdog'].beatHeart()
-
-        time.sleep(cfg['tick_length']);
-        count += 1
-  
+    el.run(cfg['tick_length'])
 
 if __name__ == '__main__':
     cfg = None
