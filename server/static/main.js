@@ -92,6 +92,7 @@ var makeTable = function(name,d) {
         ddiv.appendChild(t);
     }
     var el, ds, latest;
+    latest = new Date(0);
     var ul = document.createElement('ul');
     ddiv.appendChild(ul);
     if (d && d.date) {
@@ -248,6 +249,25 @@ var makeCamDivs = function(camlist,cb) {
     return cb();
 };
 
+var checkUptime = function(cb) {
+    getJSON('/turkeycam/app/uptime' + name, function(err, rd) {
+        var now = new Date();
+        var start = new Date(rd.start_time);
+        var uptime = Math.floor((now - start) / 1000);
+        var to_dhms = function(secs) {
+            var days = Math.floor(secs / (24*60*60));
+            secs -= days * 24 * 60 * 60;
+            var hours = Math.floor(secs / (60*60));
+            secs -= hours * 60 * 60;
+            var minutes = Math.floor(secs / (60));
+            secs -= minutes * 60;
+            return days.toString() + 'days, ' + hours.toString() + 'h, ' + minutes.toString() + 'm, ' + secs.toString() + 's';
+        };
+        document.getElementById('uptimediv').innerText = 'Uptime: ' + to_dhms(uptime);
+        cb(err,rd);
+    });
+};
+
 var startTimer = function() {
     var camlist = Object.keys(camelems);
     async.each(camlist, function(camn,cb) {
@@ -256,7 +276,9 @@ var startTimer = function() {
         });
     },
     function (err) {
-        window.setTimeout(startTimer, 5000);
+        checkUptime(function() {
+            window.setTimeout(startTimer, 5000);
+        });
     });
 };
 
