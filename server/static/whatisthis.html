@@ -1,15 +1,15 @@
 <html>
     <head>
-        <title>TurkeyCams - What is this?</title>
+        <title>TurkeyCam - What is this?</title>
     </head>
     <body>
         <link rel="stylesheet" type="text/css" href="../static/main.css">
-        <h3>TurkeyCams - What is this?</h3>
+        <h3>TurkeyCam - What is this?</h3>
         <p>Welcome to the TurkeyCam Server!</p>
         <img align="left" height="500" src="../static/camera.jpg">
         <p>This is a demonstration platform for showing how remote sensors can be deployed, their data aggregated, operated on, and presented. In this case, the sensors are cameras deployed around LBL. The cameras are based around the Raspberry Pi platform and are mounted outdoors. Power comes from a battery which is maintained by solar panels. Network connectivity is via open (visitor) WiFi.</p>
-        <p>The cameras take a photo every few seconds and compare it to the previous photo taken. If the photos are "different" enough, the new photo is sent to the server for analysis via a simple protocol over https. The server, in turns, runs a machine learning algorithm on the images to identify their contents. The ML model itself is called <a href="https://aws.amazon.com/rekognition/">Rekognition</a>and is provided by <a href="https://aws.amazon.com">Amazon AWS</a>. When images are determine to contains turkeys, they are stored for your enjoyment. The server also hosts this webpage. </p>
-        <p>This was put together by the IT User Support Group in the <a href="https://commons.lbl.gov/display/itdivision/Information+Technology+Division">IT Division</a>. If you are interested in remote sensor deployment and the use of AWS compute services, reach out to us!</p>
+        <p>The cameras take a photo every few seconds and compare it to the previous photo taken. If the photos are "different" enough, the new photo is sent to the server for analysis via a simple protocol over https. The server, in turns, runs a machine learning algorithm on the images to identify their contents. The ML model itself is called <a href="https://aws.amazon.com/rekognition/">Rekognition</a>and is provided by <a href="https://aws.amazon.com">Amazon AWS</a>. When images are determine to contains turkeys (or other charismatic fauna), they are stored for your enjoyment. The server also hosts this webpage. </p>
+        <p>This was put together by the IT User Support Group in the <a href="https://commons.lbl.gov/display/itdivision/Information+Technology+Division">IT Division</a> as a demonstration of how to deploy a remote sensor network. If you are interested in sensor deployment and the use of AWS compute services, <a href="mailto:scienceaccelerator@lbl.gov">reach out to us!</a></p>
         <h4><a href="/turkeycam">Take me back to the top</a></h4> 
     <body>
 </html>
