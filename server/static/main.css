@@ -17,6 +17,12 @@ a:hover{
     font-weight: bold;
 }
 
+table #turktable {
+    padding: 0px;
+    border-collapse: collapse;
+    
+}
+
 img {
     border: 3px solid black;
 }
