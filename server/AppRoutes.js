@@ -30,7 +30,8 @@ AppRoutes.prototype.setupRoutes = function(router) {
     router.get('/status/:name',  this.handleStatusGet.bind(this));
     router.get('/turkeys/list',  this.handleTIKListGet.bind(this));
     router.get('/turkeys/:name', this.handleTIKImageGet.bind(this));
-    router.get('/turkeys',       this.handleTurkeysGet.bind(this));
+    router.get('/turkeys',       this.handleTurkeysGet.bind(this, '/static/turkeys.html'));
+    router.get('/grid',          this.handleTurkeysGet.bind(this, '/static/grid.html'));
     router.get('/image/:name',   this.handleImageGet.bind(this));
     router.get('/uptime',        this.handleUptimeGet.bind(this));
 };
@@ -53,8 +54,8 @@ AppRoutes.prototype.handleImageGet = function(req, res) {
     }
 };
 
-AppRoutes.prototype.handleTurkeysGet = function(req, res) {
-    file_helpers.simpleSplat(res,'text/html', '/static/turkeys.html');
+AppRoutes.prototype.handleTurkeysGet = function(file, req, res) {
+    file_helpers.simpleSplat(res,'text/html', file);
 };
 
 AppRoutes.prototype.handleTIKImageGet = function(req, res) {
