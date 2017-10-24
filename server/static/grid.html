@@ -1,0 +1,40 @@
+<html>
+    <head>
+        <title>TurkeyCam - Suspected Fowl</title>
+    </head>
+    <body>
+        <link rel="stylesheet" type="text/css" href="../static/main.css">
+        <style>
+#zoomdiv {
+    z-index: 10;
+    /* position: absolute; */
+    position: fixed;
+    left: 5%;
+    top: 5%;
+    right: 0;
+    width: 85%;
+    height: 85%;
+    overflow-y: scroll;
+    overflow-x: hidden;
+    background-color: white;
+    color: black;
+    padding: 20px;
+}
+        </style>
+        <h3>Suspected Fowl Detected To-Date</h3>
+        <h4><a href="/turkeycam">Back to Live Feed</a></h4>
+        <br>
+        <div id="zoomdiv" style="display: none;"></div>
+        <div id="turksdiv">
+            <table id="turktable" style="width: 100%;">
+            </table>
+        </div>
+        <div id="bottomdiv">
+            <input type="button" id="reloadturkeys" value="Reload Suspects"></input>
+        </div>
+        <script type="text/javascript" src="../static/async.js"></script>
+        <script type="text/javascript" src="../static/helpers.js"></script>
+        <script type="text/javascript" src="../static/grid.js"></script>
+    <body>
+</html>
+
