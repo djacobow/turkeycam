@@ -65,7 +65,7 @@ DataAcceptor.prototype.handleProvision = function(req, res) {
     };
     var rv = this.pv.provision(arg);
     if (rv) {
-        this.getdevicestate(rv.node_name);
+        this.getdevicestate(rv.node_name, true);
         res.status('200');
         var sv = copyWithoutKey(rv, 'serial_number');
         res.json(sv);
@@ -153,6 +153,8 @@ DataAcceptor.prototype.handleDataPost = function(req, res) {
     // console.log('handleDataPost()');
     var iaobj = this;
     var b = req.body;
+    var rv = { message: 'nope.', };
+    var rvs = 403;
     // console.log(JSON.stringify(b,null,2));
     if (this.pv.tokValid(b)) {
        var node_name= b.node_name;
@@ -163,22 +165,28 @@ DataAcceptor.prototype.handleDataPost = function(req, res) {
            res.json({message:'unknown device'});
            return;
        }
-       cstate.busy = true;
-       cstate.source_ip = b.source_ip;
-       cstate.source_host = b.source_host;
-       cstate.source_type = b.source_type;
-       cstate.date = b.date;
-       cstate.sensor_data = b.sensor_data;
-       cstate.valid = true;
-       cstate.upload_number += 1;
-       cstate.busy = false;
-       res.status(200);
-       res.json({message: 'thanks!', upload_number: cstate.upload_number});
-       this.fireHook('push',node_name);
-    } else {
-       res.status(403);
-       res.json({ message: 'nope.' });
-    }
+       try {
+           cstate.busy = true;
+           cstate.source_ip = b.source_ip;
+           cstate.source_host = b.source_host;
+           cstate.source_type = b.source_type;
+           cstate.date = b.date;
+           cstate.sensor_data = b.sensor_data;
+           cstate.valid = true;
+           cstate.upload_number += 1;
+           cstate.busy = false;
+           rv = {message: 'thanks!', upload_number: cstate.upload_number};
+           rvs = 200;
+           this.fireHook('push',node_name);
+       } catch(e) {
+           cstate.valid = false;
+           cstate.busy = false;
+           rv = {message: 'malformed submission' };
+           rvs = 400;
+       }
+   }
+   res.status(rvs);
+   res.json(rv);
 };
 
 
