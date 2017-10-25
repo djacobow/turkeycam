@@ -130,22 +130,29 @@ DataAcceptor.prototype.handleParamsGet = function(req, res) {
 DataAcceptor.prototype.handleStillHere = function(req, res) {
     var iaobj = this;
     var b = req.body;
+    var rv = { message: 'nope.', };
+    var rvs = 403;
+
     if (this.pv.tokValid(b)) {
-       var node_name= b.node_name;
-       var cstate = this.getdevicestate(node_name);
-       cstate.ping = {
-           'date': b.date,
-           'source_ip': b.source_ip,
-           'source_host': b.source_host,
-           'source_type': b.source_type,
-       };
-       res.status(200);
-       res.json({message: 'thanks!' });
-       this.fireHook('ping',node_name);
-       return;
+       try {
+           var node_name= b.node_name;
+           var cstate = this.getdevicestate(node_name);
+           cstate.ping = {
+               'date': b.date,
+               'source_ip': b.source_ip,
+               'source_host': b.source_host,
+               'source_type': b.source_type,
+           };
+           rvs = 200;
+           rv = {message: 'thanks!'};
+           this.fireHook('ping',node_name);
+        } catch (e) {
+            rvs = 400;
+            rv = {message: 'malformed submission'};
+        }
     }
-    res.status(403);
-    res.json({ message: 'nope.' });
+    res.status(rvs);
+    res.json(rv);
 };
 
 
