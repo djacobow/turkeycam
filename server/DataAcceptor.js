@@ -25,7 +25,7 @@ var DataAcceptor = function(dev_config) {
 
 DataAcceptor.prototype.setupRoutes = function(router) {
     router.post('/push',         this.handleDataPost.bind(this));
-    router.post('/ping',         this.handleStillHere.bind(this));
+    router.post('/ping',         this.handlePing.bind(this));
     router.get('/params/:name',  this.handleParamsGet.bind(this));
     router.post('/setup/:name',  this.handleProvision.bind(this));
 };
@@ -127,7 +127,7 @@ DataAcceptor.prototype.handleParamsGet = function(req, res) {
 };
 
 
-DataAcceptor.prototype.handleStillHere = function(req, res) {
+DataAcceptor.prototype.handlePing = function(req, res) {
     var iaobj = this;
     var b = req.body;
     var rv = { message: 'nope.', };
@@ -137,6 +137,12 @@ DataAcceptor.prototype.handleStillHere = function(req, res) {
        try {
            var node_name= b.node_name;
            var cstate = this.getdevicestate(node_name);
+           if (true) {
+               var public_ip = req.headers['x-forwarded-for'];
+               if (!b.hasOwnProperty('diagnostic')) b.diagnostic = {};
+               if (!b.diagnostic.hasOwnProperty('host')) b.diagnostic.host = {};
+               b.diagnostic.host.public_ip = public_ip;
+           }
            cstate.ping = {
                'date': b.date,
                'diagnostic': b.diagnostic,
@@ -148,6 +154,7 @@ DataAcceptor.prototype.handleStillHere = function(req, res) {
         } catch (e) {
             rvs = 400;
             rv = {message: 'malformed submission'};
+            console.log(e);
         }
     }
     res.status(rvs);
@@ -174,6 +181,12 @@ DataAcceptor.prototype.handleDataPost = function(req, res) {
        try {
            cstate.busy = true;
            cstate.valid  = false;
+           if (true) {
+               var public_ip = req.headers['x-forwarded-for'];
+               if (!b.hasOwnProperty('diagnostic')) b.diagnostic = {};
+               if (!b.diagnostic.hasOwnProperty('host')) b.diagnostic.host = {};
+               b.diagnostic.host.public_ip = public_ip;
+           }
            cstate.diagnostic = b.diagnostic;
            cstate.source_type = b.source_type;
            cstate.date = b.date;
@@ -185,6 +198,7 @@ DataAcceptor.prototype.handleDataPost = function(req, res) {
            rvs = 200;
            this.fireHook('push',node_name);
        } catch(e) {
+           console.log(e);
            cstate.valid = false;
            cstate.busy = false;
            rv = {message: 'malformed submission' };

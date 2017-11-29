@@ -109,13 +109,27 @@ var makeTable = function(name,d) {
         el.innerText = 'last ping: ' + ds.toLocaleString();
         ul.appendChild(el);
     }
-    if (d && (d.diagnostic || d.ping.diagnostic)) {
+    
+    var ip = null;
+    if (d && d.diagnostic && d.diagnostic.host && d.diagnostic.host.ip) {
         ip = d.diagnostic.host.ip;
-        if (!ip) ip = d.ping.diagnostic.host.ip;
+    } else if (d && d.ping && d.ping.diagnostic && d.ping.diagnostic.host && d.ping.diagnostic.host.ip) {
+        ip = d.ping.diagnostic.host.ip;
+    } else {
+        console.log(d);
+    }
+    if (ip) {
         el = document.createElement('li');
-        el.innerText = 'Camera IP: ' + ip;
+        el.innerText = 'Camera Local IP: ' + ip;
         ul.appendChild(el);
 
+        var pip = d.diagnostic.host.public_ip;
+        if (!pip) pip = d.ping.diagnostic.host.public_ip;
+        if (pip) {
+            el = document.createElement('li');
+            el.innerText = 'Camera Public IP: ' + pip;
+            ul.appendChild(el);
+        }
         host  = d.diagnostic.host.name;
         if (!host) host = d.ping.diagnostic.host.name;
         el = document.createElement('li');
