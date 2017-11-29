@@ -41,6 +41,7 @@ class ServerConnection(object):
         }
         self.ip = self._myIP()
         self.hostname = self._myHost()
+        self.initUptime = self._sysUptime();
 
         self.creds  = self._loadCredentials()
 
@@ -62,8 +63,14 @@ class ServerConnection(object):
                 'token': self.creds['token'],
                 'source_type': self.config['device_type'],
                 'date': now.isoformat(),
-                'source_ip': self.ip,
-                'source_host': self.hostname,
+                'diagnostic': {
+                    'host': {
+                        'ip': self.ip,
+                        'name': self.hostname,
+                        'uptime': self._strTimeDelta(self._sysUptime()),
+                        'stats': self.stats,
+                    },
+                },
             }
             res = requests.post(self.config['ping_url'], data = data, timeout=20)
             self.stats['ping_attempts'] += 1
@@ -88,8 +95,17 @@ class ServerConnection(object):
             'token': self.creds['token'],
             'source_type': self.config['device_type'],
             'date': now.isoformat(),
-            'source_ip': self.ip,
-            'source_host': self.hostname,
+            'diagnostic': {
+                'host': {
+                    'ip': self.ip,
+                    'name': self.hostname,
+                    'uptime': self._strTimeDelta(self._sysUptime()),
+                },
+                'service': {
+                    'stats': self.stats,
+                    'uptime': self._strTimeDelta(self._svcUptime()),
+                },
+            },
         }
         res = requests.post(self.config['post_url'], json = data, timeout=60)
         self.stats['push_attempts'] += 1
@@ -101,6 +117,18 @@ class ServerConnection(object):
         return res
 
 
+    def _strTimeDelta(self,td):
+        return str(datetime.timedelta(seconds = td))
+    def _svcUptime(self):
+        return self._sysUptime() - self.initUptime
+    def _sysUptime(self):
+        ut_seconds = 0
+        try:
+            with open('/proc/uptime','r') as f:
+                ut_seconds = float(f.readline().split()[0])
+        except:
+            pass
+        return ut_seconds
     def _myHost(self):
         host = 'unknown'
         try:
@@ -189,6 +217,8 @@ class ServerConnection(object):
                 if creds:
                     with open(self.config['credentials_path'],'w') as fh:
                         fh.write(json.dumps(creds))
+                    if False:
+                        os.unlink(self.config['provisioning_token_path'])
                     return creds
                 else:
                     print('Could not self-provision. Exiting.')
