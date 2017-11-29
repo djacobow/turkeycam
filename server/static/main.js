@@ -109,28 +109,34 @@ var makeTable = function(name,d) {
         el.innerText = 'last ping: ' + ds.toLocaleString();
         ul.appendChild(el);
     }
-    if (d && (d.source_ip || d.ping.source_ip)) {
-        ip = d.source_ip;
-        if (!ip) ip = d.ping.source_ip;
+    if (d && (d.diagnostic || d.ping.diagnostic)) {
+        ip = d.diagnostic.host.ip;
+        if (!ip) ip = d.ping.diagnostic.host.ip;
         el = document.createElement('li');
         el.innerText = 'Camera IP: ' + ip;
         ul.appendChild(el);
-    }
-    if (d && (d.source_host || d.ping.source_host)) {
-        host  = d.source_host;
-        if (!host) host = d.ping.source_host;
+
+        host  = d.diagnostic.host.name;
+        if (!host) host = d.ping.diagnostic.host.name;
         el = document.createElement('li');
         el.innerText = 'Camera Host: ' + host;
         ul.appendChild(el);
+
+        uptime = d.diagnostic.host.uptime;
+        if (!uptime) uptime = d.ping.diagnostic.host.uptime;
+        el = document.createElement('li');
+        el.innerText = 'Uptime: ' + uptime;
+        ul.appendChild(el);
     }
+
     if (latest) {
         now = new Date();
         el = document.createElement('li');
         if ((now - latest) > (5 * 60 * 1000)) {
-            el.innerText = 'Camera is probably DOWN';
+            el.innerText = 'Camera is DOWN';
             el.style.color = 'red';
         } else {
-            el.innerText = 'Camera is probably UP';
+            el.innerText = 'Camera is UP';
             el.style.color = 'green';
         }
         ul.appendChild(el);
@@ -249,20 +255,22 @@ var makeCamDivs = function(camlist,cb) {
     return cb();
 };
 
+var to_dhms = function(secs) {
+    var days = Math.floor(secs / (24*60*60));
+    secs -= days * 24 * 60 * 60;
+    var hours = Math.floor(secs / (60*60));
+    secs -= hours * 60 * 60;
+    var minutes = Math.floor(secs / (60));
+    secs -= minutes * 60;
+    return days.toString() + 'days, ' + hours.toString() + 'h, ' + minutes.toString() + 'm, ' + secs.toString() + 's';
+};
+
+
 var checkUptime = function(cb) {
     getJSON('/turkeycam/app/uptime' + name, function(err, rd) {
         var now = new Date();
         var start = new Date(rd.start_time);
         var uptime = Math.floor((now - start) / 1000);
-        var to_dhms = function(secs) {
-            var days = Math.floor(secs / (24*60*60));
-            secs -= days * 24 * 60 * 60;
-            var hours = Math.floor(secs / (60*60));
-            secs -= hours * 60 * 60;
-            var minutes = Math.floor(secs / (60));
-            secs -= minutes * 60;
-            return days.toString() + 'days, ' + hours.toString() + 'h, ' + minutes.toString() + 'm, ' + secs.toString() + 's';
-        };
         document.getElementById('uptimediv').innerText = 'Uptime: ' + to_dhms(uptime);
         cb(err,rd);
     });
