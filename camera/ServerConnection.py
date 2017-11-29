@@ -68,7 +68,10 @@ class ServerConnection(object):
                         'ip': self.ip,
                         'name': self.hostname,
                         'uptime': self._strTimeDelta(self._sysUptime()),
+                    },
+                    'service': {
                         'stats': self.stats,
+                        'uptime': self._strTimeDelta(self._svcUptime()),
                     },
                 },
             }
