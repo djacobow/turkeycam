@@ -118,7 +118,16 @@ class ServerConnection(object):
 
 
     def _strTimeDelta(self,td):
-        return str(datetime.timedelta(seconds = td))
+        days = td // 86400
+        td -= days * 86400
+        hours = td // 3600
+        td -= hours * 3600
+        minutes = td // 60
+        td -= minutes * 60
+        seconds = td
+        f = [int(x) for x in [days,hours,minutes,seconds]]
+        return("{0}d {1}h {2}m {3}s".format(*f))
+        #return str(datetime.timedelta(seconds = td))
     def _svcUptime(self):
         return self._sysUptime() - self.initUptime
     def _sysUptime(self):
