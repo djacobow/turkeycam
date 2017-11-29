@@ -72,7 +72,7 @@ class ServerConnection(object):
                     },
                 },
             }
-            res = requests.post(self.config['ping_url'], data = data, timeout=20)
+            res = requests.post(self.config['ping_url'], json = data, timeout=20)
             self.stats['ping_attempts'] += 1
             if self.httpOK(res.status_code):
                 self.stats['consec_net_errs'] = 0
