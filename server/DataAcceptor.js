@@ -139,8 +139,7 @@ DataAcceptor.prototype.handleStillHere = function(req, res) {
            var cstate = this.getdevicestate(node_name);
            cstate.ping = {
                'date': b.date,
-               'source_ip': b.source_ip,
-               'source_host': b.source_host,
+               'diagnostic': b.diagnostic,
                'source_type': b.source_type,
            };
            rvs = 200;
@@ -174,13 +173,13 @@ DataAcceptor.prototype.handleDataPost = function(req, res) {
        }
        try {
            cstate.busy = true;
-           cstate.source_ip = b.source_ip;
-           cstate.source_host = b.source_host;
+           cstate.valid  = false;
+           cstate.diagnostic = b.diagnostic;
            cstate.source_type = b.source_type;
            cstate.date = b.date;
            cstate.sensor_data = b.sensor_data;
-           cstate.valid = true;
            cstate.upload_number += 1;
+           cstate.valid = true;
            cstate.busy = false;
            rv = {message: 'thanks!', upload_number: cstate.upload_number};
            rvs = 200;
