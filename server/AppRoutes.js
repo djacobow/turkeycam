@@ -127,7 +127,7 @@ AppRoutes.prototype.looksInteresting = function(cs) {
         for (var i=0; i< cs.aws_results.Labels.length; i++) {
             var label = cs.aws_results.Labels[i].Name;
             var conf  = cs.aws_results.Labels[i].Confidence;
-            if (conf >= 50) {
+            if (conf >= 55) {
                 for (var j=0; j<this.interesting.length; j++) {
                     var interesting = new RegExp(
                         '\\b' + this.interesting[j] + '\\b',
@@ -193,7 +193,7 @@ AppRoutes.prototype.sendToAWS = function(idata, cb) {
             Bytes: idata.image_jpeg_buffer
         },
         MaxLabels: 20,
-        MinConfidence: 50,
+        MinConfidence: 55,
     };
 
     this.rekognition.detectLabels(parms, function(err, data) {
