@@ -57,7 +57,7 @@ class ServerConnection(object):
     def ping(self):
         try:
             print('ping()')
-            now = datetime.datetime.now()
+            now = datetime.datetime.now(datetime.timezone.utc)
             data = {
                 'node_name': self.creds.get('node_name',''),
                 'token': self.creds['token'],
@@ -90,7 +90,7 @@ class ServerConnection(object):
 
     def push(self, sdata):
         print('uploadData()')
-        now = datetime.datetime.now()
+        now = datetime.datetime.now(datetime.timezone.utc)
 
         data = {
             'sensor_data': sdata,
