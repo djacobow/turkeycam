@@ -123,20 +123,28 @@ var makeTable = function(name,d) {
         el.innerText = 'Camera Local IP: ' + ip;
         ul.appendChild(el);
 
-        var pip = d.diagnostic.host.public_ip;
-        if (!pip) pip = d.ping.diagnostic.host.public_ip;
+        var pip = null;
+        if (d.ping && d.ping.diagnostic && d.ping.diagnostic.host) {
+            if (!pip) pip = d.ping.diagnostic.host.public_ip;
+        }
         if (pip) {
             el = document.createElement('li');
             el.innerText = 'Camera Public IP: ' + pip;
             ul.appendChild(el);
         }
-        host  = d.diagnostic.host.name;
+        var host = null;
+        if (d.diagnostic && d.diagnostic.host) {
+            host  = d.diagnostic.host.name;
+        }
         if (!host) host = d.ping.diagnostic.host.name;
         el = document.createElement('li');
         el.innerText = 'Camera Host: ' + host;
         ul.appendChild(el);
 
-        uptime = d.diagnostic.host.uptime;
+        var uptime = null;
+        if (d.diagnostic && d.diagnostic.host) {
+            uptime = d.diagnostic.host.uptime;
+        }
         if (!uptime) uptime = d.ping.diagnostic.host.uptime;
         el = document.createElement('li');
         el.innerText = 'Uptime: ' + uptime;
