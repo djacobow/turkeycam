@@ -26,6 +26,7 @@ var DataAcceptor = function(dev_config) {
 DataAcceptor.prototype.setupRoutes = function(router) {
     router.post('/push',         this.handleDataPost.bind(this));
     router.post('/ping',         this.handlePing.bind(this));
+    router.head('/time',         this.handleTimeHead.bind(this));
     router.get('/params/:name',  this.handleParamsGet.bind(this));
     router.post('/setup/:name',  this.handleProvision.bind(this));
 };
@@ -55,6 +56,11 @@ DataAcceptor.prototype.fireHook = function(name, data) {
            }
         }
     }
+};
+
+DataAcceptor.prototype.handleTimeHead = function(req, res) {
+    res.writeHead(200, { 'server_time_epoch_ms': Date.now(), });
+    res.end();
 };
 
 DataAcceptor.prototype.handleProvision = function(req, res) {

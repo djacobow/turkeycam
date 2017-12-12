@@ -65,6 +65,16 @@ var turkeyAlert = function(name,d) {
     }
 };
 
+var getDiag = function(d, sh, name) {
+    var v = null;
+    if (d.ping && d.ping.diagnostic && d.diagnostic[sh]) {
+        v = d.ping.diagnostic[sh][name];
+    } else if (d.diagnostic && d.diagnostic[sh]) {
+        v = d.diagnostic[sh][name];
+    }
+    return v;
+};
+
 var makeTable = function(name,d) {
     var ddiv = camelems[name].data;
     removeChildren(ddiv);
@@ -110,36 +120,35 @@ var makeTable = function(name,d) {
         ul.appendChild(el);
     }
     
-    var ip = null;
-    if (d && d.diagnostic && d.diagnostic.host && d.diagnostic.host.ip) {
-        ip = d.diagnostic.host.ip;
-    } else if (d && d.ping && d.ping.diagnostic && d.ping.diagnostic.host && d.ping.diagnostic.host.ip) {
-        ip = d.ping.diagnostic.host.ip;
-    } else {
-        console.log(d);
-    }
+    var ip = getDiag(d,'host','ip');
     if (ip) {
         el = document.createElement('li');
         el.innerText = 'Camera Local IP: ' + ip;
         ul.appendChild(el);
 
-        var pip = d.diagnostic.host.public_ip;
-        if (!pip) pip = d.ping.diagnostic.host.public_ip;
+        var pip = null;
+        if (d.ping && d.ping.diagnostic && d.ping.diagnostic.host) {
+            if (!pip) pip = d.ping.diagnostic.host.public_ip;
+        }
         if (pip) {
             el = document.createElement('li');
             el.innerText = 'Camera Public IP: ' + pip;
             ul.appendChild(el);
         }
-        host  = d.diagnostic.host.name;
-        if (!host) host = d.ping.diagnostic.host.name;
+
+        var host = getDiag(d,'host','name');
         el = document.createElement('li');
         el.innerText = 'Camera Host: ' + host;
         ul.appendChild(el);
 
-        uptime = d.diagnostic.host.uptime;
-        if (!uptime) uptime = d.ping.diagnostic.host.uptime;
+        var uptime = getDiag(d,'host','uptime');
         el = document.createElement('li');
-        el.innerText = 'Uptime: ' + uptime;
+        el.innerText = 'Host Uptime: ' + uptime;
+        ul.appendChild(el);
+
+        var suptime = getDiag(d,'service','uptime');
+        el = document.createElement('li');
+        el.innerText = 'Service Uptime: ' + suptime;
         ul.appendChild(el);
     }
 
@@ -228,9 +237,10 @@ var makeCamDivs = function(camlist,cb) {
         var cam_top_div = document.createElement('div');
         cam_top_div.style = "float: left; width: 100%;";
         var cam_nam_div = document.createElement('div');
-        var cam_name = document.createElement('span');
+        var cam_name = document.createElement('a');
         cam_name.style = "font-size: 150%;";
         cam_name.innerText = "Camera: " + cname;
+        cam_name.href = 'app/status/' + cname;
         cam_nam_div.appendChild(cam_name);
         var cam_img_div = document.createElement('div');
         cam_img_div.style = "width: 805px; float: left;";
