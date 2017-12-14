@@ -78,7 +78,7 @@ def pre_run():
         'params_path': './local_config.json',
         'device_name': None,
         'device_type': 'picamera',
-        'device_serial': cconn.getSerial(),
+        'device_serial': bytes(cconn.getSerial(),'utf-8'),
     }
     sconn = ServerConnection(server_config)
 
