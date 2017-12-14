@@ -2,12 +2,28 @@
 import string
 import random
 import requests
-from urllib.parse import urlencode
+from urllib.parse import quote_plus
 import json
 import datetime
 import socket
 import os
 import netifaces
+import hashlib
+import base64 as b64
+
+# RPi only has Pi 3.4 which has no "secrets"
+no_secrets = False
+try:
+    import secrets
+except:
+    import random
+    no_secrets = True
+
+DEBUG_AUTH = False
+
+def dB(n,b):
+    if DEBUG_AUTH:
+        print('DBG ' + n + '\t:\t' + b64.b64encode(b).decode('ascii'))
 
 class ServerConnection(object):
     def __init__(self, server_config):
@@ -20,13 +36,17 @@ class ServerConnection(object):
             raise Exception('server_url_base_not_provided')
         if not self.config.get('device_serial',None):
             raise Exception('device_serial_identifier_not_provided')
-        if not self.config.get('device_type',None):
-            self.config['device_type'] = 'generic'
 
-        if not self.config.get('post_url',None):
-                self.config['post_url'] = self.config['url_base'] + '/device/push'
-        if not self.config.get('ping_url',None):
-                self.config['ping_url'] = self.config['url_base'] + '/device/ping'
+        def setIfNeeded(name,value):
+            if not self.config.get(name,None):
+                self.config[name] = value
+
+        setIfNeeded('device_type','generic')
+        setIfNeeded('post_url', self.config['url_base'] + '/device/push')
+        setIfNeeded('ping_url', self.config['url_base'] + '/device/ping')
+        setIfNeeded('params_url', self.config['url_base'] + '/device/params')
+        setIfNeeded('mail_fetch_url', self.config['url_base'] + '/device/mbox/fetch')
+        setIfNeeded('mail_post_url', self.config['url_base'] + '/device/mbox/respond')
 
         self.stats = {
             'consec_net_errs': 0,
@@ -41,45 +61,65 @@ class ServerConnection(object):
         }
         # return local IP. We'll get the public IP from the http request,
         # and there's no good reason to trust the device for that
-        self.interfaces = self._myInterfaces()
-        self.hostname = self._myHost()
-        self.initUptime = self._sysUptime();
-
+        self.help = _Helpers()
+        self.interfaces = self.help.myInterfaces()
+        self.hostname = self.help.myHost()
         self.creds  = self._loadCredentials()
 
-        if not self.config.get('params_url',None):
-                self.config['params_url'] = self.config['url_base'] + '/device/params/' + self.creds['node_name']
 
     def getStats(self):
         return { k:self.stats[k] for k in self.stats }
 
-    def httpOK(self,n):
-        return n >= 200 and n < 300
+
+    def respondMail(self,msg_id,payload):
+        try:
+            print('respondMail()')
+            d = {
+                'responses': [
+                    {
+                        'msg_id': msg_id,
+                        'type': 'response',
+                        'payload': payload,
+                    },
+                ],
+            }
+            self._addLoginTok(d)
+            url = self.config['mail_post_url']
+            res = requests.post(url, json = d, timeout=20)
+            return res
+        except Exception as e:
+            print('problem_posting_mail_response',e)
+            return None
+
+        
+
+    def getMail(self):
+        try:
+            print('getMail()')
+            d = {}
+            self._addLoginTok(d)
+            url = self.config['mail_fetch_url'] + '?qstr=' + quote_plus(json.dumps(d))
+            res = requests.get(url, timeout = 20)
+            return res.json()
+        except Exception as e:
+            print('mail_fetch_exception',e)
+            return [] 
 
     def ping(self):
         try:
             print('ping()')
             now = datetime.datetime.now(datetime.timezone.utc)
             data = {
-                'node_name': self.creds.get('node_name',''),
-                'token': self.creds['token'],
                 'source_type': self.config['device_type'],
                 'date': now.isoformat(),
-                'diagnostic': {
-                    'host': {
-                        'ifaces': self.interfaces,
-                        'name': self.hostname,
-                        'uptime': self._strTimeDelta(self._sysUptime()),
-                    },
-                    'service': {
-                        'stats': self.stats,
-                        'uptime': self._strTimeDelta(self._svcUptime()),
-                    },
-                },
             }
+
+            self._addLoginTok(data)
+            self._addDiagInfo(data)
+
             res = requests.post(self.config['ping_url'], json = data, timeout=20)
             self.stats['ping_attempts'] += 1
-            if self.httpOK(res.status_code):
+            if self.help.httpOK(res.status_code):
                 self.stats['consec_net_errs'] = 0
             else:
                 self.stats['consec_net_errs'] += 1
@@ -90,31 +130,52 @@ class ServerConnection(object):
             return None
 
 
+    def _addLoginTok(self, sdata):
+
+        tok = self.help.b64str2bytes(self.creds['token'])
+        srv_salt = self.help.b64str2bytes(self.creds.get('server_salt',''))
+        serial = self.config['device_serial']
+
+        combined = tok + srv_salt + serial
+
+        src_tokhash = hashlib.sha512(combined).digest()
+
+        new_salt = self.help.makeRandomBytes(128)
+
+        combined = src_tokhash + new_salt
+        h1_dig = hashlib.sha512(combined).digest()
+
+        sdata['identification'] = {
+            'node_name': self.creds.get('node_name',''),
+            'salt': self.help.bytes2b64str(new_salt),
+            'salted_tok': self.help.bytes2b64str(h1_dig),
+        }
+
+        dB('tok',tok)
+        dB('srv_salt',srv_salt)
+        dB('serial',serial)
+        dB('combined',combined)
+        dB('src_tokhash', src_tokhash)
+        dB('new_salt', new_salt)
+        dB('h1_dig', h1_dig)
+
+
     def push(self, sdata):
         print('uploadData()')
         now = datetime.datetime.now(datetime.timezone.utc)
 
         data = {
             'sensor_data': sdata,
-            'node_name': self.creds.get('node_name',''),
-            'token': self.creds['token'],
             'source_type': self.config['device_type'],
             'date': now.isoformat(),
-            'diagnostic': {
-                'host': {
-                    'ifaces': self.interfaces,
-                    'name': self.hostname,
-                    'uptime': self._strTimeDelta(self._sysUptime()),
-                },
-                'service': {
-                    'stats': self.stats,
-                    'uptime': self._strTimeDelta(self._svcUptime()),
-                },
-            },
         }
+
+        self._addLoginTok(data)
+        self._addDiagInfo(data)
+
         res = requests.post(self.config['post_url'], json = data, timeout=60)
         self.stats['push_attempts'] += 1
-        if self.httpOK(res.status_code):
+        if self.help.httpOK(res.status_code):
             self.stats['consec_net_errs'] = 0
         else:
             self.stats['consec_net_errs'] += 1
@@ -122,62 +183,18 @@ class ServerConnection(object):
         return res
 
 
-    def _strTimeDelta(self,td):
-        days = td // 86400
-        td -= days * 86400
-        hours = td // 3600
-        td -= hours * 3600
-        minutes = td // 60
-        td -= minutes * 60
-        seconds = td
-        f = [int(x) for x in [days,hours,minutes,seconds]]
-        return("{0}d {1}h {2}m {3}s".format(*f))
-        #return str(datetime.timedelta(seconds = td))
-    def _svcUptime(self):
-        return self._sysUptime() - self.initUptime
-    def _sysUptime(self):
-        ut_seconds = 0
-        try:
-            with open('/proc/uptime','r') as f:
-                ut_seconds = float(f.readline().split()[0])
-        except:
-            pass
-        return ut_seconds
-    def _myHost(self):
-        host = 'unknown'
-        try:
-            host = socket.gethostname()
-        except:
-            pass
-        return host
-    def _myPublicIP(self):
-        try:
-            return requests.get('https://ipinfo.io').json()['ip']
-        except:
-            return 'dunno'
-    def _myInterfaces(self):
-        try:
-            ifnames = netifaces.interfaces()
-            return { ifn: netifaces.ifaddresses(ifn) for ifn in ifnames }
-        except Exception as e:
-            print('Exception getting network IF info', e)
-            return 'dunno'
-    def _myLocalIP(Self):
-        try:
-            ifaces = netifaces.interfaces()
-            x = [netifaces.ifaddresses(ifn) for ifn in ifaces]
-            print('local ip',x)
-            y = [q[netifaces.AF_INET] for q in x]
-            print('local ip',y)
-
-            return 'skipped'
-            #return [netifaces.ifaddresses(ifn)[netifaces.AF_INET][0]['addr'] for ifn in ifaces]
-            #import socket
-            #return socket.gethostbyname(socket.getfqdn())
-        except Exception as e:
-            print('Exception getting Local IP', e)
-            return 'dunno'
-
+    def _addDiagInfo(self, data):
+        data['diagnostic'] = {
+            'host': {
+                'ifaces': self.interfaces,
+                'name': self.hostname,
+                'uptime': self.help.strTimeDelta(self.help.sysUptime()),
+            },
+            'service': {
+                'stats': self.stats,
+                'uptime': self.help.strTimeDelta(self.help.svcUptime()),
+            },
+        }
     def getParams(self, params = {}):
         self._paramsLocalOverride(params)
         self._paramsRemoteOverride(params)
@@ -202,7 +219,9 @@ class ServerConnection(object):
     def _paramsRemoteOverride(self,params):
         print('_paramsRemoteOverride')
         try:
-            url = self.config['params_url'] + '?' + urlencode({'token':self.creds['token']})
+            d = {}
+            self._addLoginTok(d)
+            url = self.config['params_url'] + '?qstr=' + quote_plus(json.dumps(d))
             res = requests.get(url, timeout=30)
             if res.status_code == 200:
                 data = res.json()
@@ -216,12 +235,10 @@ class ServerConnection(object):
 
     def _selfProvision(self):
         print('_selfProvision')
-        def randStr(n):
-            return ''.join(random.choice(string.ascii_uppercase + string.digits) for _ in range(n))
 
         name = self.config.get('device_name',None)
         if name is None:
-            name = "d3s_" + randStr(10)
+            name = "d3s_" + self.help.makeRandomString(10)
 
         provtok = None
         with open(self.config['provisioning_token_path'],'r') as ptfh:
@@ -265,4 +282,62 @@ class ServerConnection(object):
 
 
 
+class _Helpers():
+    def __init__(self):
+        self.initUptime = self.sysUptime()
+    def makeRandomBytes(self, N):
+        if no_secrets:
+            return bytes(os.urandom(N))
+        else:
+            return secrets.token_bytes(N)
+    def makeRandomString(self, N):
+        if no_secrets:
+            return ''.join(random.SystemRandom().choice(string.ascii_uppercase + string.ascii_lowercase + string.digits) for _ in range(N))
+        else:
+            return ''.join(secrets.choice(string.ascii_uppercase + string.ascii_lowercase + string.digits) for _ in range(N))
+    def bytes2b64str(self, b):
+        return b64.b64encode(b).decode('ascii')
+    def b64str2bytes(self, s):
+        return b64.b64decode(s)
 
+    def myPublicIP(self):
+        try:
+            return requests.get('https://ipinfo.io').json()['ip']
+        except:
+            return 'dunno'
+    def myInterfaces(self):
+        try:
+            ifnames = netifaces.interfaces()
+            return { ifn: netifaces.ifaddresses(ifn) for ifn in ifnames }
+        except Exception as e:
+            print('Exception getting network IF info', e)
+            return 'dunno'
+    def myHost(self):
+        host = 'unknown'
+        try:
+            host = socket.gethostname()
+        except:
+            pass
+        return host
+    def httpOK(self,n):
+        return n >= 200 and n < 300
+    def sysUptime(self):
+        ut_seconds = 0
+        try:
+            with open('/proc/uptime','r') as f:
+                ut_seconds = float(f.readline().split()[0])
+        except:
+            pass
+        return ut_seconds
+    def strTimeDelta(self,td):
+        days = td // 86400
+        td -= days * 86400
+        hours = td // 3600
+        td -= hours * 3600
+        minutes = td // 60
+        td -= minutes * 60
+        seconds = td
+        f = [int(x) for x in [days,hours,minutes,seconds]]
+        return("{0}d {1}h {2}m {3}s".format(*f))
+    def svcUptime(self):
+        return self.sysUptime() - self.initUptime
