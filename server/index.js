@@ -19,13 +19,19 @@ var setup_debug_hooks = function(da, ar) {
     da.setHook('push',w);
     da.setHook('ping',w);
     da.setHook('getparams',w);
+    da.setHook('fetchmail',w);
+    da.setHook('respondmail', function(hname, sname) {
+        w(hname, sname);
+        r = da.mb.getResponses();
+        console.log('responses',JSON.stringify(r,null,2));
+    });
 };
 
 
 if (require.main === module) {
 
     var dev_config = {
-        'provisioned_clients_path': './provisioned_clients.json',
+        'provisioned_clients_path': './provisioned.sqlite',
         'provisioning_tokens_path': './provisioning_tokens.json',
         'device_params_path': './camera_params.json',
     };

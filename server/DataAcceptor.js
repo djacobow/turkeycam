@@ -1,6 +1,8 @@
 /* jshint esversion: 6 */
 var Provisioner   = require('./Provisioner');
-var fs = require('fs');
+var Mailbox       = require('./Mailbox');
+var fs            = require('fs');
+var express       = require('express');
 
 function copyWithoutKey(ind, banned) {
     var od = {};
@@ -18,17 +20,22 @@ var DataAcceptor = function(dev_config) {
     this.pv = new Provisioner(this.config.provisioned_clients_path,
                               this.config.provisioning_tokens_path);
     this.pv.load();
-    this.setupDefaults();
+    this.mb = new Mailbox(dev_config.mailbox, this.pv, this.fireHook.bind(this));
+    this.setupDefaults(); // FIXME: use the callback
     this.loadSensorParams();
     this.hooks = {};
+
 };
 
 DataAcceptor.prototype.setupRoutes = function(router) {
-    router.post('/push',         this.handleDataPost.bind(this));
-    router.post('/ping',         this.handlePing.bind(this));
-    router.head('/time',         this.handleTimeHead.bind(this));
-    router.get('/params/:name',  this.handleParamsGet.bind(this));
-    router.post('/setup/:name',  this.handleProvision.bind(this));
+    router.post('/push',          this.handleDataPost.bind(this));
+    router.post('/ping',          this.handlePing.bind(this));
+    router.head('/time',          this.handleTimeHead.bind(this));
+    router.get('/params',         this.handleParamsGet.bind(this));
+    router.post('/setup/:name',   this.handleProvision.bind(this));
+    var mbrouter = express.Router();
+    router.use('/mbox', mbrouter);
+    this.mb.setupRoutes(mbrouter);
 };
 
 DataAcceptor.prototype.setHook = function(name,func) {
@@ -69,17 +76,19 @@ DataAcceptor.prototype.handleProvision = function(req, res) {
         serial_number: req.body.serial_number || '',
         provtok: req.body.provtok || '',
     };
-    var rv = this.pv.provision(arg);
-    if (rv) {
-        this.getdevicestate(rv.node_name, true);
-        res.status('200');
-        var sv = copyWithoutKey(rv, 'serial_number');
-        res.json(sv);
-        this.fireHook('provision',rv.node_name);
-        return;
-    }
-    res.status('403');
-    res.json({message: 'begone!'});
+    var tthis = this;
+    this.pv.provision(arg,function(rv) {
+        if (rv) {
+            tthis.getdevicestate(rv.node_name, true);
+            res.status('200');
+            var sv = copyWithoutKey(rv, 'serial_number');
+            res.json(sv);
+            tthis.fireHook('provision',rv.node_name);
+            return;
+        }
+        res.status('403');
+        res.json({message: 'begone!'});
+    });
 };
 
 
@@ -105,31 +114,49 @@ DataAcceptor.prototype.getdevicestate = function(name, startup = false) {
     return cs;
 };
 
-DataAcceptor.prototype.setupDefaults = function() {
+DataAcceptor.prototype.setupDefaults = function(cb) {
     console.log('setupDefaults()');
     var cstates = {};
     this.cstates = cstates;
     var othis = this;
-    Object.keys(this.pv.getProvisioned()).forEach(function(node_name) {
-        othis.getdevicestate(node_name, true);
+    this.pv.getProvisioned(function(names) {
+        console.log('back from GetProvisioned');
+        names.forEach(function(node_name) {
+            console.log('node_name',node_name);
+            othis.getdevicestate(node_name, true);
+        });
+        if (cb) cb(null);
+        return;
     });
+};
+
+var safeJSONParse = function(s) {
+    try {
+        return JSON.parse(s);
+    } catch(e) {
+        console.log('Parse exception',e);
+    }
+    return {};
 };
 
 
 DataAcceptor.prototype.handleParamsGet = function(req, res) {
-    var b = { node_name: req.params.name, token: req.query.token };
-    if (this.pv.tokValid(b)) {
-        res.status(200);
-        if (this.cparams.hasOwnProperty(b.node_name)) {
-            res.json(this.cparams[b.node_name]);
-            this.fireHook('getparams',b.node_name);
-        } else {
-            res.json({});
+    var b = safeJSONParse(req.query.qstr);
+    var tthis = this;
+    this.pv.tokValid(b,function(v) {
+        if (v) {
+            res.status(200);
+            if (tthis.cparams.hasOwnProperty(b.identification.node_name)) {
+                res.json(this.cparams[b.identification.node_name]);
+            } else {
+                res.json({});
+            }
+            tthis.fireHook('getparams',b.identification.node_name);
+            return;
         }
-        return;
-    }
-    res.status(403);
-    res.json({ message: 'nyet.' });
+        res.status(403);
+        res.json({ message: 'nyet.' });
+    });
 };
 
 
@@ -139,32 +166,35 @@ DataAcceptor.prototype.handlePing = function(req, res) {
     var rv = { message: 'nope.', };
     var rvs = 403;
 
-    if (this.pv.tokValid(b)) {
-       try {
-           var node_name= b.node_name;
-           var cstate = this.getdevicestate(node_name);
-           if (true) {
-               var public_ip = req.headers['x-forwarded-for'];
-               if (!b.hasOwnProperty('diagnostic')) b.diagnostic = {};
-               if (!b.diagnostic.hasOwnProperty('host')) b.diagnostic.host = {};
-               b.diagnostic.host.public_ip = public_ip;
-           }
-           cstate.ping = {
-               'date': b.date,
-               'diagnostic': b.diagnostic,
-               'source_type': b.source_type,
-           };
-           rvs = 200;
-           rv = {message: 'thanks!'};
-           this.fireHook('ping',node_name);
-        } catch (e) {
-            rvs = 400;
-            rv = {message: 'malformed submission'};
-            console.log(e);
+    var tthis = this;
+    this.pv.tokValid(b,function(v) {
+        if (v) {
+            try {
+                var node_name= b.identification.node_name;
+                var cstate = tthis.getdevicestate(node_name);
+                if (true) {
+                    var public_ip = req.headers['x-forwarded-for'];
+                    if (!b.hasOwnProperty('diagnostic')) b.diagnostic = {};
+                    if (!b.diagnostic.hasOwnProperty('host')) b.diagnostic.host = {};
+                    b.diagnostic.host.public_ip = public_ip;
+                }
+                cstate.ping = {
+                    'date': b.date,
+                    'diagnostic': b.diagnostic,
+                    'source_type': b.source_type,
+                };
+                rvs = 200;
+                rv = {message: 'thanks!'};
+                tthis.fireHook('ping',node_name);
+            } catch (e) {
+                rvs = 400;
+                rv = {message: 'malformed submission'};
+                console.log(e);
+            }
         }
-    }
-    res.status(rvs);
-    res.json(rv);
+        res.status(rvs);
+        res.json(rv);
+    });
 };
 
 
@@ -175,44 +205,47 @@ DataAcceptor.prototype.handleDataPost = function(req, res) {
     var rv = { message: 'nope.', };
     var rvs = 403;
     // console.log(JSON.stringify(b,null,2));
-    if (this.pv.tokValid(b)) {
-       var node_name= b.node_name;
-       var cstate = this.getdevicestate(node_name);
-       if (!cstate) {
-           console.log('unknown device: ' + node_name);
-           res.status('403');
-           res.json({message:'unknown device'});
-           return;
+    var tthis = this;
+    this.pv.tokValid(b,function(v) {
+        if (v) {
+            var node_name= b.identification.node_name;
+            var cstate = tthis.getdevicestate(node_name);
+            if (!cstate) {
+                console.log('unknown device: ' + node_name);
+                res.status('403');
+                res.json({message:'unknown device'});
+                return;
+            }
+            try {
+                cstate.busy = true;
+                cstate.valid  = false;
+                if (true) {
+                    var public_ip = req.headers['x-forwarded-for'];
+                    if (!b.hasOwnProperty('diagnostic')) b.diagnostic = {};
+                    if (!b.diagnostic.hasOwnProperty('host')) b.diagnostic.host = {};
+                    b.diagnostic.host.public_ip = public_ip;
+                }
+                cstate.diagnostic = b.diagnostic;
+                cstate.source_type = b.source_type;
+                cstate.date = b.date;
+                cstate.sensor_data = b.sensor_data;
+                cstate.upload_number += 1;
+                cstate.valid = true;
+                cstate.busy = false;
+                rv = {message: 'thanks!', upload_number: cstate.upload_number};
+                rvs = 200;
+                tthis.fireHook('push',node_name);
+            } catch(e) {
+                console.log(e);
+                cstate.valid = false;
+                cstate.busy = false;
+                rv = {message: 'malformed submission' };
+                rvs = 400;
+            }
        }
-       try {
-           cstate.busy = true;
-           cstate.valid  = false;
-           if (true) {
-               var public_ip = req.headers['x-forwarded-for'];
-               if (!b.hasOwnProperty('diagnostic')) b.diagnostic = {};
-               if (!b.diagnostic.hasOwnProperty('host')) b.diagnostic.host = {};
-               b.diagnostic.host.public_ip = public_ip;
-           }
-           cstate.diagnostic = b.diagnostic;
-           cstate.source_type = b.source_type;
-           cstate.date = b.date;
-           cstate.sensor_data = b.sensor_data;
-           cstate.upload_number += 1;
-           cstate.valid = true;
-           cstate.busy = false;
-           rv = {message: 'thanks!', upload_number: cstate.upload_number};
-           rvs = 200;
-           this.fireHook('push',node_name);
-       } catch(e) {
-           console.log(e);
-           cstate.valid = false;
-           cstate.busy = false;
-           rv = {message: 'malformed submission' };
-           rvs = 400;
-       }
-   }
-   res.status(rvs);
-   res.json(rv);
+       res.status(rvs);
+       res.json(rv);
+    });
 };
 
 
