@@ -1,4 +1,4 @@
-
+/* jshint esversion: 6 */
 var camelems = {};
 var current_results = {};
 
@@ -67,12 +67,38 @@ var turkeyAlert = function(name,d) {
 
 var getDiag = function(d, sh, name) {
     var v = null;
-    if (d.ping && d.ping.diagnostic && d.diagnostic[sh]) {
+    if (d.ping && d.ping.diagnostic && d.ping.diagnostic[sh]) {
         v = d.ping.diagnostic[sh][name];
     } else if (d.diagnostic && d.diagnostic[sh]) {
         v = d.diagnostic[sh][name];
     }
     return v;
+};
+
+var addLocalIPs = function(d) {
+    var li = document.createElement('li');
+    var ips = {};
+    if (d && d.diagnostic && d.diagnostic.host && d.diagnostic.host.ifaces) {
+        var ifnames = Object.keys(d.diagnostic.host.ifaces);
+        for (var i=0; i<ifnames.length; i++) {
+            var ifn = ifnames[i];
+            if (ifn != 'lo') {
+                var ifd = d.diagnostic.host.ifaces[ifn];
+                if (ifd) {
+                    var inet = ifd[2];
+                    if (inet) {
+                        var first_inet = inet[0];
+                        if (first_inet) {
+                            var addr = first_inet.addr;
+                            if (addr) ips[ifn] = addr;
+                        }
+                    }
+                }
+            }
+        }
+    }
+    li.innerText = 'host.ifaces: ' + JSON.stringify(ips);
+    return li;
 };
 
 var makeTable = function(name,d) {
@@ -120,12 +146,9 @@ var makeTable = function(name,d) {
         ul.appendChild(el);
     }
     
-    var ip = getDiag(d,'host','ip');
-    if (ip) {
-        el = document.createElement('li');
-        el.innerText = 'Camera Local IP: ' + ip;
-        ul.appendChild(el);
+    ul.appendChild(addLocalIPs(d));
 
+    if (true) {
         var pip = null;
         if (d.ping && d.ping.diagnostic && d.ping.diagnostic.host) {
             if (!pip) pip = d.ping.diagnostic.host.public_ip;
@@ -314,13 +337,51 @@ var startTimer = function() {
     });
 };
 
+var pollResultHandler = function(pollres) {
+    var targets = {};
+    Object.keys(pollres).forEach(function(actionname) {
+        pollres[actionname].forEach(function(targetname) {
+            targets[targetname] = 1;
+        });
+    });
 
+    async.each(Object.keys(targets), function(camn, cb) {
+        checkData(camn, function(cerr, cd) {
+            cb();
+        });
+    },function(err) {
+        checkUptime(function() {
+            window.setTimeout(startTimer, 5000);
+        });
+    });
+
+};
+
+var rePoll = function(cb, sid = 999999) {
+    url = '/turkeycam/app/poll?id=' + sid;
+    rerunner = function() { rePoll(cb,sid); };
+    try {
+        getJSON(url, function(pollerr, pollres) {
+            if (pollerr) {
+                // timeout or other problem
+                window.setTimeout(rerunner, 1000);
+            } else {
+                cb(pollres);
+                window.setTimeout(rerunner, 250);
+            }
+        });
+    } catch (e) {
+        window.setTimeout(rerunner, 1000);
+    }
+};
 
 
 getCamList(function(err,incams) {
+    var session_id = makeRandomString(15);
     if (!err) {
         makeCamDivs(incams, function() {
-            startTimer();
+            rePoll(pollResultHandler, session_id);
+            // startTimer();
         });
     }
 });
