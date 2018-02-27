@@ -161,12 +161,14 @@ DataAcceptor.prototype.handleParamsGet = function(req, res) {
 
 
 DataAcceptor.prototype.handlePing = function(req, res) {
+    // console.log('ping');
     var iaobj = this;
     var b = req.body;
     var rv = { message: 'nope.', };
     var rvs = 403;
 
     var tthis = this;
+    // console.log(b);
     this.pv.tokValid(b,function(v) {
         if (v) {
             try {
