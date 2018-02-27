@@ -4,6 +4,7 @@ var fs           = require('fs');
 var aws          = require('aws-sdk');
 aws.config.loadFromPath('./aws.json');
 // aws.config.logger = process.stdout;
+var lp           = require('./LongPoller.js');
 
 function setup() {
     var rekognition = null;
@@ -23,6 +24,9 @@ var AppRoutes = function(app_config, dataacceptor) {
         this.rekognition = new aws.Rekognition();
     }
     this.starttime = (new Date()).toISOString();
+    this.lp = new lp();
+    this.da.setHook('push',this.lp.newChange.bind(this.lp));
+    this.da.setHook('ping',this.lp.newChange.bind(this.lp));
 };
 
 AppRoutes.prototype.setupRoutes = function(router) {
@@ -34,6 +38,7 @@ AppRoutes.prototype.setupRoutes = function(router) {
     router.get('/grid',          this.handleTurkeysGet.bind(this, '/static/grid.html'));
     router.get('/image/:name',   this.handleImageGet.bind(this));
     router.get('/uptime',        this.handleUptimeGet.bind(this));
+    router.get('/poll',          this.lp.poll.bind(this.lp));
 };
 
 AppRoutes.prototype.handleUptimeGet = function(req, res) {
