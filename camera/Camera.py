@@ -14,6 +14,7 @@ class Camera():
         self.last_idata = None
         self.average_sameness = None
         self.trailing_average_sameness = None 
+        self.camera = picamera.PiCamera()
 
     def setParams(self,cfg):
         self.config = cfg
@@ -34,11 +35,16 @@ class Camera():
         stream = None
         image = None
 
-        with picamera.PiCamera() as camera:
+        if True:
+        #with picamera.PiCamera() as camera:
+            camera = self.camera
             for param in self.config:
                 setattr(camera,param,self.config[param])
             stream = io.BytesIO()
-            time.sleep(1) # this is for the camera to adjust its exposure
+            # if the camera object was just created, it needs time
+            # for its eyes to adjust to light level. If it was already
+            # open this is not necesssary.
+            #time.sleep(1) 
             print('Capture image')
             camera.capture(stream, format='rgb')
             width = self.config['resolution'][0]
