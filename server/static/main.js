@@ -323,6 +323,7 @@ var checkUptime = function(cb) {
     });
 };
 
+/* do not need with poller
 var startTimer = function() {
     var camlist = Object.keys(camelems);
     async.each(camlist, function(camn,cb) {
@@ -336,6 +337,7 @@ var startTimer = function() {
         });
     });
 };
+*/
 
 var pollResultHandler = function(pollres) {
     var targets = {};
@@ -351,7 +353,7 @@ var pollResultHandler = function(pollres) {
         });
     },function(err) {
         checkUptime(function() {
-            window.setTimeout(startTimer, 5000);
+            // window.setTimeout(startTimer, 5000);
         });
     });
 
@@ -363,14 +365,17 @@ var rePoll = function(cb, sid = 999999) {
     try {
         getJSON(url, function(pollerr, pollres) {
             if (pollerr) {
-                // timeout or other problem
+                console.log('Poll Err: ' + pollerr);
                 window.setTimeout(rerunner, 1000);
             } else {
+                
+                console.log('Poll res: ' + JSON.stringify(pollres,null,2));
                 cb(pollres);
                 window.setTimeout(rerunner, 250);
             }
         });
     } catch (e) {
+        console.log('Poll went sideways: ' + JSON.stringify(e,null,2));
         window.setTimeout(rerunner, 1000);
     }
 };
