@@ -3,6 +3,15 @@ var removeChildren = function(n) {
 };
 
 
+var makeRandomString = function(l) {
+    var text = '';
+    var possible = 'ABCDEFGHIJKLMOPQRSTUVWXYZ0123456789';
+    while (l--) {
+        text += possible.charAt(Math.floor(Math.random() * possible.length));
+    }
+    return text;
+};
+
 var getJSON = function(url, cb) {
     var xhr = new XMLHttpRequest();
     xhr.onreadystatechange = function() {
