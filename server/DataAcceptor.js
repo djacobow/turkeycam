@@ -50,14 +50,14 @@ DataAcceptor.prototype.setHook = function(name,func) {
     }
 };
 
-DataAcceptor.prototype.fireHook = function(name, data) {
+DataAcceptor.prototype.fireHook = function(evname, devname, data = null) {
     // maybe fire these async?
     var hooks = this.hooks;
-    if (hooks.hasOwnProperty(name)) {
-        for (var i=0; i<hooks[name].length; i++) {
+    if (hooks.hasOwnProperty(evname)) {
+        for (var i=0; i<hooks[evname].length; i++) {
             try {
-                var hkfn = hooks[name][i];
-                hkfn(name, data);
+                var hkfn = hooks[evname][i];
+                hkfn(evname, devname, data);
             } catch (e) {
                 console.log(e);
            }
@@ -236,7 +236,7 @@ DataAcceptor.prototype.handleDataPost = function(req, res) {
                 cstate.busy = false;
                 rv = {message: 'thanks!', upload_number: cstate.upload_number};
                 rvs = 200;
-                tthis.fireHook('push',node_name);
+                tthis.fireHook('push',node_name,b.sensor_data);
             } catch(e) {
                 console.log(e);
                 cstate.valid = false;
