@@ -48,7 +48,7 @@ var safeJSONParse = function(s) {
     try {
         return JSON.parse(s);
     } catch(e) { 
-        console.log('Parse exception',e);
+        console.error('Parse exception',e);
     }
     return {};
 };

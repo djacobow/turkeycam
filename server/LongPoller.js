@@ -19,7 +19,7 @@ var LongPoller = function(config = null) {
 };
 
 LongPoller.prototype.startTimer = function() {
-    console.log('startTimer');
+    console.debug('startTimer');
     var tthis = this;
     var timer_fn = function() {
         try {
@@ -63,10 +63,10 @@ LongPoller.prototype.poll = function(req, res) {
 LongPoller.prototype.finishPoll = function(subscriber, sid) {
     if (subscriber && subscriber.res && subscriber.changes) {
         try {
-            console.log('finishPoll for ' + sid);
+            console.debug('finishPoll for ' + sid);
             subscriber.res.json(subscriber.changes);
         } catch (e) {
-            console.log('finishPoll for ' + sid + ' ERR: ' + e);
+            console.debug('finishPoll for ' + sid + ' ERR: ' + e);
         }
         subscriber.changes = null;
         subscriber.res = null;

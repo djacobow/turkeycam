@@ -23,7 +23,7 @@ var setup_debug_hooks = function(da, ar) {
     da.setHook('respondmail', function(hname, sname) {
         w(hname, sname);
         r = da.mb.getResponses();
-        console.log('responses',JSON.stringify(r,null,2));
+        console.debug('responses',JSON.stringify(r,null,2));
     });
 };
 

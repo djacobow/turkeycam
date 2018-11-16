@@ -16,7 +16,7 @@ var AppRoutes = function(app_config, dataacceptor) {
     this.da = dataacceptor;
     this.interesting = [
         'cat', 'goat', 'turkey', 'turkey bird', 'turkeys',
-        'deer', 'poultry', 'ostritch', 'emu', 'cougar', 'mountain lion',
+        'poultry', 'ostritch', 'emu', 'cougar', 'mountain lion',
         'lion',
     ];
     this.rekognition = null;
@@ -102,7 +102,7 @@ AppRoutes.prototype.handleTIKListGet = function(req, res) {
 
 
 AppRoutes.prototype.handleListGet = function(req, res) {
-    console.log('get devicelist');
+    console.info('get devicelist');
     var devlist = this.da.getdevicelist();
     res.json(devlist);
 };
@@ -180,7 +180,7 @@ AppRoutes.prototype.onNewPost = function(hooktype, device_name) {
             cs.image_jpeg_buffer = Buffer.from(cs.sensor_data.image_jpeg,'base64');
             this.sendToAWS(cs, function(awerr,awdata) {
                 cs.aws_results = awdata;
-                // console.log('back from sendToAWS');
+                // console.debug('back from sendToAWS');
                 if (arobj.looksInteresting(cs)) {
                     arobj.saveImage(cs);
                 }
@@ -190,7 +190,7 @@ AppRoutes.prototype.onNewPost = function(hooktype, device_name) {
 };
 
 AppRoutes.prototype.sendToAWS = function(idata, cb) {
-    // console.log('sendToAWS()');
+    // console.debug('sendToAWS()');
     if (this.fake) return this.fakeSendToAWS(idata,cb);
 
     var parms = {
@@ -202,13 +202,13 @@ AppRoutes.prototype.sendToAWS = function(idata, cb) {
     };
 
     this.rekognition.detectLabels(parms, function(err, data) {
-        // console.log('- detectLabels CB()');
+        // console.debug('- detectLabels CB()');
         if (err) {
-            console.log('AWS error');
-            console.log(err);
+            console.error('AWS error');
+            console.error(err);
         }
         if (data) {
-            console.log(data);
+            console.debug(data);
         }
         cb(err,data);
     }); 

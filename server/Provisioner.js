@@ -14,7 +14,7 @@ const MAX_PROV_ATTEMPTS = 5;
 
 var Dbg = function(n,b) {
     if (DEBUG_AUTH) {
-        console.log('DBG ' + n + '\t:\t' + b.toString('base64'));
+        console.debug('DBG ' + n + '\t:\t' + b.toString('base64'));
     }
 };
 
@@ -38,8 +38,8 @@ var loadFJS = function(fn) {
         var fdata = JSON.parse(fstring);
         return fdata;
     } catch (ex) {
-        console.log('Error loading file: ' + fn);
-        console.log(ex);
+        console.error('Error loading file: ' + fn);
+        console.error(ex);
     }
     return null;
 };

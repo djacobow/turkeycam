@@ -59,7 +59,7 @@ DataAcceptor.prototype.fireHook = function(evname, devname, data = null) {
                 var hkfn = hooks[evname][i];
                 hkfn(evname, devname, data);
             } catch (e) {
-                console.log(e);
+                console.error(e);
            }
         }
     }
@@ -115,14 +115,14 @@ DataAcceptor.prototype.getdevicestate = function(name, startup = false) {
 };
 
 DataAcceptor.prototype.setupDefaults = function(cb) {
-    console.log('setupDefaults()');
+    console.debug('setupDefaults()');
     var cstates = {};
     this.cstates = cstates;
     var othis = this;
     this.pv.getProvisioned(function(names) {
-        console.log('back from GetProvisioned');
+        console.debug('back from GetProvisioned');
         names.forEach(function(node_name) {
-            console.log('node_name',node_name);
+            console.debug('node_name',node_name);
             othis.getdevicestate(node_name, true);
         });
         if (cb) cb(null);
@@ -134,7 +134,7 @@ var safeJSONParse = function(s) {
     try {
         return JSON.parse(s);
     } catch(e) {
-        console.log('Parse exception',e);
+        console.error('Parse exception',e);
     }
     return {};
 };
@@ -161,14 +161,14 @@ DataAcceptor.prototype.handleParamsGet = function(req, res) {
 
 
 DataAcceptor.prototype.handlePing = function(req, res) {
-    // console.log('ping');
+    // console.debug('ping');
     var iaobj = this;
     var b = req.body;
     var rv = { message: 'nope.', };
     var rvs = 403;
 
     var tthis = this;
-    // console.log(b);
+    // console.debug(b);
     this.pv.tokValid(b,function(v) {
         if (v) {
             try {
@@ -191,7 +191,7 @@ DataAcceptor.prototype.handlePing = function(req, res) {
             } catch (e) {
                 rvs = 400;
                 rv = {message: 'malformed submission'};
-                console.log(e);
+                console.error(e);
             }
         }
         res.status(rvs);
@@ -201,19 +201,19 @@ DataAcceptor.prototype.handlePing = function(req, res) {
 
 
 DataAcceptor.prototype.handleDataPost = function(req, res) {
-    // console.log('handleDataPost()');
+    // console.debug('handleDataPost()');
     var iaobj = this;
     var b = req.body;
     var rv = { message: 'nope.', };
     var rvs = 403;
-    // console.log(JSON.stringify(b,null,2));
+    // console.debug(JSON.stringify(b,null,2));
     var tthis = this;
     this.pv.tokValid(b,function(v) {
         if (v) {
             var node_name= b.identification.node_name;
             var cstate = tthis.getdevicestate(node_name);
             if (!cstate) {
-                console.log('unknown device: ' + node_name);
+                console.warn('unknown device: ' + node_name);
                 res.status('403');
                 res.json({message:'unknown device'});
                 return;
@@ -238,7 +238,7 @@ DataAcceptor.prototype.handleDataPost = function(req, res) {
                 rvs = 200;
                 tthis.fireHook('push',node_name,b.sensor_data);
             } catch(e) {
-                console.log(e);
+                console.error(e);
                 cstate.valid = false;
                 cstate.busy = false;
                 rv = {message: 'malformed submission' };
