@@ -91,6 +91,9 @@ def pre_run():
     if cfg.get('wdog_use_i2c',False):
         from Wdog2 import Wdog
         cfg['wdog'] = Wdog(cfg['wdog2'])
+    if cfg.get('wdog_use_spi',False):
+        from Wdog3 import Wdog
+        cfg['wdog'] = Wdog(cfg['wdog2'])
     else:
         from Wdog import Wdog
         cfg['wdog'] = Wdog(cfg['wdog'])
