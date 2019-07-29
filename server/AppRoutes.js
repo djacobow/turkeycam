@@ -6,11 +6,6 @@ aws.config.loadFromPath('./aws.json');
 // aws.config.logger = process.stdout;
 var lp           = require('./LongPoller.js');
 
-function setup() {
-    var rekognition = null;
-    if (!fake) rekognition = new aws.Rekognition();
-}
-
 var AppRoutes = function(app_config, dataacceptor) {
     this.config = app_config;
     this.da = dataacceptor;
@@ -20,7 +15,7 @@ var AppRoutes = function(app_config, dataacceptor) {
         'lion',
     ];
     this.rekognition = null;
-    if (!this.config.fake) {
+    if (!this.config.fake_rekognition) {
         this.rekognition = new aws.Rekognition();
     }
     this.starttime = (new Date()).toISOString();
@@ -150,20 +145,12 @@ AppRoutes.prototype.looksInteresting = function(cs) {
 
 AppRoutes.prototype.fakeSendToAWS = function(idata, cb) {
     rd = {
-        message: 'This is a fake response. We never used AWS Rekognition',
+        message: 'This is a fake response. Rekognition is turned off to save money.',
         fakemode: true,
         Labels: [
             {
-                "Name": "Blurkey Bird",
-                "Confidence": "51",
-            },
-            {
-                "Name": "Flying Saucer",
-                "Confidence": "100",
-            },
-            {
-                "Name": "Elvis",
-                "Confidence": "90",
+                "Name": "Rekognition is disabled to save $$$.",
+                "Confidence": "99",
             },
         ],
         OrientationCorrection: "ROTATE_0",
@@ -191,7 +178,7 @@ AppRoutes.prototype.onNewPost = function(hooktype, device_name) {
 
 AppRoutes.prototype.sendToAWS = function(idata, cb) {
     // console.debug('sendToAWS()');
-    if (this.fake) return this.fakeSendToAWS(idata,cb);
+    if (this.config.fake_rekognition) return this.fakeSendToAWS(idata,cb);
 
     var parms = {
         Image: {

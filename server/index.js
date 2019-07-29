@@ -36,7 +36,7 @@ if (require.main === module) {
         'device_params_path': './camera_params.json',
     };
     var app_config = {
-        // for future
+        fake_rekognition: true, // no rekognition (save money, no turkey detection)
     };
 
     var da = new DataAcceptor(dev_config);
